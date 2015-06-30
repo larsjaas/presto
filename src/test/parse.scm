@@ -1,10 +1,11 @@
 (import (chibi)
+        (chibi string)
         (chibi test))
 (import (presto parse))
 
-; tokenize
-(test '("one" "2" "three") (tokenize "one 2 three"))
-(test '("on" " 2 thr" "" "") (tokenize "one 2 three" #\e))
+; string-split
+(test '("one" "2" "three") (string-split "one 2 three"))
+(test '("on" " 2 thr" "" "") (string-split "one 2 three" #\e))
 
 ; path-split
 (test '("images/" "image" ".png") (path-split "images/image.png"))

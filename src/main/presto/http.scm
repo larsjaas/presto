@@ -48,8 +48,6 @@
         ((eq? status 404) "HTTP/1.1 404 File not found")
         (else "HTTP/1.1 404 File not found")))
 
-(define parse-request tokenize)
-
 (define (http-server port headers basedir)
   (define *sock* (make-listener-socket (get-address-info "loopback" port)))
   (set-socket-option! *sock* level/socket socket-opt/reuseaddr 1)
@@ -64,7 +62,7 @@
       (define status 200)
       (define status-ok #t)
       (define request-headers headers)
-      (let* ((request (parse-request input))
+      (let* ((request (string-split input))
              (method (car request))
              (path (car (cdr request)))
              (proto (car (cdr (cdr request))))

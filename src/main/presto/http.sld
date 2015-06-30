@@ -6,6 +6,7 @@
           (chibi net)
           (chibi term edit-line)
           (chibi process)
+          (chibi string)
           (chibi filesystem)
           (chibi log)
           (presto parse)

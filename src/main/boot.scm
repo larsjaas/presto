@@ -1,12 +1,12 @@
 #! /usr/bin/env chibi-scheme -r
 
-(import (chibi))
-(import (chibi config))
-(import (chibi log))
+(import (chibi)
+        (chibi string)
+        (chibi config))
 (import (srfi 18)) ; make-thread
-(import (presto))
-(import (presto parse))
-(import (presto http))
+(import (presto)
+        (presto parse)
+        (presto http))
 
 (define *config* #f)
 
@@ -15,7 +15,7 @@
     (cond ((eq? args '()))
           (else
             (if (equal? "--" (substring (car args) 0 2))
-                (let* ((arg (tokenize (car args) #\=))
+                (let* ((arg (string-split (car args) #\=))
                        (optionname (substring (car arg) 2))
                        (optionsym (string->symbol optionname))
                        (value (join "=" (cdr arg))))
