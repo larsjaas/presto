@@ -1,0 +1,45 @@
+#! /usr/bin/env chibi-scheme -r
+
+(import (chibi))
+(import (chibi config))
+(import (chibi log))
+(import (srfi 18)) ; make-thread
+(import (presto))
+(import (presto parse))
+(import (presto http))
+
+(define *config* #f)
+
+(define (update-config-settings arguments)
+  (let iter ((args arguments))
+    (cond ((eq? args '()))
+          (else
+            (if (equal? "--" (substring (car args) 0 2))
+                (let* ((arg (tokenize (car args) #\=))
+                       (optionname (substring (car arg) 2))
+                       (optionsym (string->symbol optionname))
+                       (value (join "=" (cdr arg))))
+                  (cond ((null? (conf-get *config* optionsym))
+                         (set! *config* (conf-set *config* optionsym value)))
+                        ((integer? (conf-get *config* optionsym))
+                         (set! *config* (conf-set *config* optionsym (string->number value))))
+                        (else
+                         (set! *config* (conf-set *config* optionsym value))))
+                  (iter (cdr args))))))))
+
+(define responder
+  (make-thread
+    (lambda ()
+      (presto-httpd (conf-get *config* 'htdocs-root)
+                    (conf-get *config* 'http-port)))))
+
+(define (main arguments)
+  (set! *config* (conf-load "presto.conf"))
+  (update-config-settings (cddr arguments))
+
+;  (if (not (null? (conf-get *config* 'access-log)))
+;      (let ((log (log-open (conf-get *config* 'access-log))))
+;        (http-set-access-log! log)))
+
+  (thread-start! responder)
+  (thread-join! responder))
