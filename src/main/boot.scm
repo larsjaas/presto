@@ -6,6 +6,7 @@
 (import (srfi 18)) ; make-thread
 (import (presto)
         (presto parse)
+        (presto logging)
         (presto http))
 
 (define *config* #f)
@@ -37,9 +38,13 @@
   (set! *config* (conf-load "presto.conf"))
   (update-config-settings (cddr arguments))
 
-;  (if (not (null? (conf-get *config* 'access-log)))
-;      (let ((log (log-open (conf-get *config* 'access-log))))
-;        (http-set-access-log! log)))
+  (if (not (null? (conf-get *config* 'access-log)))
+      (let ((logger (make-logger (conf-get *config* 'access-log))))
+        (http-set-access-log! logger)))
+
+  (if (not (null? (conf-get *config* 'error-log)))
+      (let ((logger (make-logger (conf-get *config* 'error-log))))
+        (http-set-error-log! logger)))
 
   (thread-start! responder)
   (thread-join! responder))

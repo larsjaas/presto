@@ -1,13 +1,13 @@
 ; stackless actor-based web application server framework
 
-(define access-log #f)
-(define error-log #f)
+(define *alog* #f)
+(define *elog* #f)
 
 (define (http-set-access-log! log)
-  (set! access-log log))
+  (set! *alog* log))
 
 (define (http-set-error-log! log)
-  (set! error-log log))
+  (set! *elog* log))
 
 (define (join joiner elements)
   (apply string-append
@@ -81,13 +81,14 @@
               (else
                 (set! status 404)
                 (set! status-ok #f)
+                (if *elog* (*elog* 'error status " " input))
                 #f)))
 
       (if (and status-ok body)
           (set! request-headers (append request-headers
                                         `(("Content-Length" . ,(bytevector-length body))))))
 
-      (log-info input) ; access-log
+      (if *alog* (*alog* 'info status " " input))
 
       (show out (status-message status) nl)
       (if status-ok
