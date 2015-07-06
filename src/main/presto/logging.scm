@@ -16,7 +16,6 @@
   (set! *error-log* logger))
 
 (define (make-logger file . o)
-  ; FIXME: support ports directly
   (let* ((logfd (if (string? file) (open file (bitwise-ior open/write open/append open/create)) #f))
          (logport (if (port? file) file (open-output-file-descriptor logfd)))
          (level 3)
