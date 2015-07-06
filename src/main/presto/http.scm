@@ -3,11 +3,10 @@
 (define *alog* #f)
 (define *elog* #f)
 
-(define (http-set-access-log! log)
-  (set! *alog* log))
 
-(define (http-set-error-log! log)
-  (set! *elog* log))
+(define (http-initialize)
+  (set! *alog* (get-access-log-logger))
+  (set! *elog* (get-error-log-logger)))
 
 (define (join joiner elements)
   (apply string-append
@@ -24,9 +23,11 @@
                         (iter (cdr headrs)))))))
 
 (define (valid-filename basedir path)
-  (let ((filename (string-append basedir path)))
-    (if (file-directory? filename)
-        (set! filename (string-append filename "/index.html")))
+  (let ((filename (string-append basedir path))
+        (index (string-append basedir path "/index.html")))
+    (if (and (file-directory? filename)
+             (file-exists? index))
+        (set! filename index))
     (if (and (file-exists? filename)
              (file-is-readable? filename))
         filename
@@ -57,6 +58,7 @@
            (in (open-input-file-descriptor *conn*))
            (out (open-output-file-descriptor *conn*)))
       (define input (read-line in))
+      ; FIXME: read request headers before closing
       (close-input-port in)
       (define body #f)
       (define status 200)

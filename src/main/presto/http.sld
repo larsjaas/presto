@@ -13,5 +13,5 @@
           (presto testsuite)
           (presto logging)
           (presto mime))
-  (export http-server join http-set-access-log! http-set-error-log!)
+  (export http-initialize http-server join)
   (include "http.scm"))

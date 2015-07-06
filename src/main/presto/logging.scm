@@ -1,5 +1,20 @@
 ; until I figure out how the hell (chibi log) works, this will have to do...
 
+(define *access-log* #f)
+(define *error-log* #f)
+
+(define (get-access-log-logger)
+  *access-log*)
+
+(define (get-error-log-logger)
+  *error-log*)
+
+(define (set-access-log-logger! logger)
+  (set! *access-log* logger))
+
+(define (set-error-log-logger! logger)
+  (set! *error-log* logger))
+
 (define (make-logger file)
   (let* ((logfd (open file (bitwise-ior open/write open/append open/create)))
          (logport (open-output-file-descriptor logfd))
@@ -41,3 +56,5 @@
             ((eq? dispatch 'flush) (apply log-flush o))
             ((eq? dispatch 'close) (apply log-close o))
             (else #f)))))
+
+

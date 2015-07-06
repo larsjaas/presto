@@ -5,7 +5,6 @@
         (chibi config))
 (import (srfi 18)) ; make-thread
 (import (presto)
-        (presto parse)
         (presto logging)
         (presto http))
 
@@ -40,11 +39,12 @@
 
   (if (not (null? (conf-get *config* 'access-log)))
       (let ((logger (make-logger (conf-get *config* 'access-log))))
-        (http-set-access-log! logger)))
+        (set-access-log-logger! logger)))
 
   (if (not (null? (conf-get *config* 'error-log)))
       (let ((logger (make-logger (conf-get *config* 'error-log))))
-        (http-set-error-log! logger)))
+        (set-error-log-logger! logger)))
 
+  (http-initialize)
   (thread-start! responder)
   (thread-join! responder))
