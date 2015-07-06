@@ -37,14 +37,22 @@
   (set! *config* (conf-load "presto.conf"))
   (update-config-settings (cddr arguments))
 
+  ; set up all pre-initialize settings, before initialize-calls fetches and
+  ; starts using the values
   (if (not (null? (conf-get *config* 'access-log)))
-      (let ((logger (make-logger (conf-get *config* 'access-log))))
+      (let ((logger (make-logger (conf-get *config* 'access-log)))
+            (stdout (make-logger (current-output-port))))
+        (logger 'append stdout)
         (set-access-log-logger! logger)))
 
+
   (if (not (null? (conf-get *config* 'error-log)))
-      (let ((logger (make-logger (conf-get *config* 'error-log))))
+      (let ((logger (make-logger (conf-get *config* 'error-log)))
+            (stderr (make-logger (current-error-port))))
+        (logger 'append stderr)
         (set-error-log-logger! logger)))
 
-  (http-initialize)
+  (presto-initialize)
+
   (thread-start! responder)
   (thread-join! responder))

@@ -17,6 +17,9 @@
 
 (define (get-presto-version-string) (version-string *presto-version*))
 
+(define (presto-initialize)
+  (http-initialize))
+
 (define (presto-httpd basedir port)
   (let ((headers
           (list (cons "Server" (show #f "presto/" (get-presto-version-string)))
