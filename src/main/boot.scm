@@ -1,4 +1,4 @@
-#! /usr/bin/env chibi-scheme -r
+#! /usr/bin/env TERM= chibi-scheme -r
 
 (import (chibi)
         (chibi string)
@@ -6,6 +6,7 @@
 (import (srfi 18)) ; make-thread
 (import (presto)
         (presto logging)
+        (presto formatting)
         (presto http))
 
 (define *config* #f)

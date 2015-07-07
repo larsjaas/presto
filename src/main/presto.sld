@@ -6,6 +6,7 @@
           (chibi filesystem)
           (presto logging)
           (presto time)
+          (presto formatting)
           (presto http))
   (export presto-initialize
           presto-httpd

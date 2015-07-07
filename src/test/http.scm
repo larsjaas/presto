@@ -2,7 +2,12 @@
         (chibi test))
 (import (presto http))
 
-; join
-(test '"one;2;three" (join ";" '("one" "2" "three")))
-(test '"a - b - c" (join " - " '("a" "b" "c")))
+; http/1.1-status-message
+(test "HTTP/1.1 200 OK" (http/1.1-status-message 200))
+(test "HTTP/1.1 404 File not found" (http/1.1-status-message 404))
+
+; http/1.1-date-format
+(test "Tue, 07 Jul 2015 13:58:52 GMT" (http/1.1-date-format 1436270332))
+
+; TODO: http/1.1-date-parse
 

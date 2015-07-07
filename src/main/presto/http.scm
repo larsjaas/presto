@@ -8,20 +8,6 @@
   (set! *alog* (get-access-log-logger))
   (set! *elog* (get-error-log-logger)))
 
-(define (join joiner elements)
-  (apply string-append
-    (append `(,(car elements))
-            (let iter ((elts (cdr elements)))
-              (cond ((null? elts) '())
-                    (else
-                      (append `(,joiner ,(car elts)) (iter (cdr elts)))))))))
-
-(define (format-headers headers)
-  (let iter ((headrs headers))
-    (cond ((eq? headrs '()) `(,nl))
-          (else (append `(,(car (car headrs)) ": " ,(cdr (car headrs)) ,nl)
-                        (iter (cdr headrs)))))))
-
 (define (valid-filename basedir path)
   (let ((filename (string-append basedir path))
         (index (string-append basedir path "/index.html")))
@@ -44,7 +30,28 @@
             (set! headers `(("Content-Type" . ,type) . ,headers))))
     (cons headers (file->bytevector pathname))))
 
-(define (status-message status)
+(define (http/1.1-date-format seconds)
+  (define (weekday-string num)
+    (cond ((and (<= 0 num) (>= 8 num))
+           (list-ref (list "Sun" "Mon" "Tue" "Wed" "Thu" "Fri" "Sat" "Sun") num))
+          (else #f)))
+  (define (month-string num)
+    (cond ((and (<= 0 num) (>= 13 num))
+           (list-ref (list "Jan" "Feb" "Mar" "Apr" "May" "Jun" "Jul" "Aug" "Sep" "Oct" "Nov" "Dec") num))
+          (else #f)))
+  (let ((time (seconds->time seconds)))
+    (show #f (weekday-string (time-day-of-week time))
+             ", " (pad-02 (time-day time))
+             " " (month-string (time-month time))
+             " " (+ 1900 (time-year time))
+             " " (pad-02 (time-hour time))
+             ":" (pad-02 (time-minute time))
+             ":" (pad-02 (time-second time))
+             " GMT")))
+
+;  "Sun, 06 Nov 1994 08:49:37 GMT") ; FIXME
+
+(define (http/1.1-status-message status)
   (cond ((eq? status 200) "HTTP/1.1 200 OK")
         ((eq? status 404) "HTTP/1.1 404 File not found")
         (else "HTTP/1.1 404 File not found")))
@@ -92,7 +99,7 @@
 
       (if *alog* (*alog* 'info status " " input))
 
-      (show out (status-message status) nl)
+      (show out (http/1.1-status-message status) nl)
       (if status-ok
           (apply show out (format-headers request-headers)))
       (if (and status-ok body)
