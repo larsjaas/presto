@@ -1,0 +1,8 @@
+(define-library (presto index)
+  (import (chibi)
+          (srfi 1)
+          (srfi 95)
+          (chibi filesystem)
+          (chibi show))
+  (export get-html-index)
+  (include "index.scm"))

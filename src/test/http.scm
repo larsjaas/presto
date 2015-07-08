@@ -2,9 +2,9 @@
         (chibi test))
 (import (presto http))
 
-; http/1.1-status-message
-(test "HTTP/1.1 200 OK" (http/1.1-status-message 200))
-(test "HTTP/1.1 404 File not found" (http/1.1-status-message 404))
+; http/1.1-status-line
+(test "HTTP/1.1 200 OK" (http/1.1-status-line 200))
+(test "HTTP/1.1 404 File not found" (http/1.1-status-line 404))
 
 ; http/1.1-date-format
 (test "Tue, 07 Jul 2015 13:58:52 GMT" (http/1.1-date-format 1436270332))

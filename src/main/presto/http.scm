@@ -51,7 +51,7 @@
 
 ;  "Sun, 06 Nov 1994 08:49:37 GMT") ; FIXME
 
-(define (http/1.1-status-message status)
+(define (http/1.1-status-line status)
   (cond ((eq? status 200) "HTTP/1.1 200 OK")
         ((eq? status 404) "HTTP/1.1 404 File not found")
         (else "HTTP/1.1 404 File not found")))
@@ -76,12 +76,16 @@
              (path (car (cdr request)))
              (proto (car (cdr (cdr request))))
              (filename (valid-filename basedir path)))
-        (cond ((and (equal? "GET" method) filename)
+        (cond ((and (equal? "GET" method) filename (file-regular? filename))
                 (let ((fileinfo (file-read filename)))
                   (set! body (cdr fileinfo))
                   (if (eq? '() (car fileinfo))
                       #t
                       (set! request-headers (append request-headers (car fileinfo))))))
+              ((and (equal? "GET" method) filename (file-directory? filename))
+                (set! request-headers (append request-headers
+                                              `(("Content-Type" . "text/html"))))
+                (set! body (string->utf8 (get-html-index basedir path))))
               ((and (equal? "GET" method) (equal? "/testsuite" path))
                 (set! request-headers (append request-headers
                                               `(("Content-Type" . "text/plain"))))
@@ -99,7 +103,7 @@
 
       (if *alog* (*alog* 'info status " " input))
 
-      (show out (http/1.1-status-message status) nl)
+      (show out (http/1.1-status-line status) nl)
       (if status-ok
           (apply show out (format-headers request-headers)))
       (if (and status-ok body)
