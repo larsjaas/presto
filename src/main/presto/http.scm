@@ -3,6 +3,8 @@
 (define *alog* #f)
 (define *elog* #f)
 
+(define *version* "")
+
 
 (define (http-initialize)
   (set! *alog* (get-access-log-logger))
@@ -51,13 +53,33 @@
 
 ;  "Sun, 06 Nov 1994 08:49:37 GMT") ; FIXME
 
+(define (http/1.1-status-message status)
+  (cond ((eq? status 200) "OK")
+        ((eq? status 400) "Bad request")
+        ((eq? status 404) "File not found")
+        (else "Unknown request")))
+
 (define (http/1.1-status-line status)
-  (cond ((eq? status 200) "HTTP/1.1 200 OK")
-        ((eq? status 404) "HTTP/1.1 404 File not found")
-        (else "HTTP/1.1 404 File not found")))
+  (show #f "HTTP/1.1 "
+        (number->string status) " " (http/1.1-status-message status)))
+
+(define (http/1.1-error-page status)
+  (string->utf8
+    (show #f "<html>" nl
+          "<head><title>" status " " (http/1.1-status-message status) "</title></head>" nl
+          "<body bgcolor=\"white\">" nl
+          "<center><h1>" status " " (http/1.1-status-message status) "</h1></center>" nl
+          "<hr><center>presto/" *version* "</center>" nl
+          "</body>" nl
+          "</html>" nl)))
+
+(define (error-response-headers status)
+  `(("Date" . ,(http/1.1-date-format (current-seconds)))
+    ("Content-Type" . "text/html")))
 
 (define (http-server port headers basedir)
   (define *sock* (make-listener-socket (get-address-info "loopback" port)))
+  (set! *version* (car (reverse (string-split (cdr (assoc "Server" headers)) #\/))))
   (set-socket-option! *sock* level/socket socket-opt/reuseaddr 1)
   (let mainloop ()
     (let* ((*addr* (make-sockaddr))
@@ -70,7 +92,7 @@
       (define body #f)
       (define status 200)
       (define status-ok #t)
-      (define request-headers headers)
+      (define response-headers headers)
       (let* ((request (string-split input))
              (method (car request))
              (path (car (cdr request)))
@@ -81,13 +103,13 @@
                   (set! body (cdr fileinfo))
                   (if (eq? '() (car fileinfo))
                       #t
-                      (set! request-headers (append request-headers (car fileinfo))))))
+                      (set! response-headers (append response-headers (car fileinfo))))))
               ((and (equal? "GET" method) filename (file-directory? filename))
-                (set! request-headers (append request-headers
+                (set! response-headers (append response-headers
                                               `(("Content-Type" . "text/html"))))
                 (set! body (string->utf8 (get-html-index basedir path))))
               ((and (equal? "GET" method) (equal? "/testsuite" path))
-                (set! request-headers (append request-headers
+                (set! response-headers (append response-headers
                                               `(("Content-Type" . "text/plain"))))
                 (set! body (string->utf8 (call-with-output-string testsuite)))
                 )
@@ -97,17 +119,19 @@
                 (if *elog* (*elog* 'error status " " input))
                 #f)))
 
-      (if (and status-ok body)
-          (set! request-headers (append request-headers
+      (cond ((not status-ok)
+             (set! body (http/1.1-error-page status))
+             (set! response-headers (append response-headers (error-response-headers status)))))
+
+      (if body
+          (set! response-headers (append response-headers
                                         `(("Content-Length" . ,(bytevector-length body))))))
 
       (if *alog* (*alog* 'info status " " input))
 
       (show out (http/1.1-status-line status) nl)
-      (if status-ok
-          (apply show out (format-headers request-headers)))
-      (if (and status-ok body)
-          (write-bytevector body out)) ; maybe dump with-input-from-file instead
+      (apply show out (format-headers response-headers))
+      (write-bytevector body out) ; maybe dump with-input-from-file instead
       (close-output-port out)
       (close-file-descriptor *conn*)
       (mainloop))))
