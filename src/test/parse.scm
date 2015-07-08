@@ -20,9 +20,9 @@
       (path-split "/home/larsa/temp/presto-0.0.1.tar.gz"))
 (test '("/tmp/temp.001/" "file" ".tmp") (path-split "/tmp/temp.001/file.tmp"))
 
-; arguments
-
-; urldecode
-(test '("url" ("arguments" ("hello"))) (url-decode "url?hello"))
-
+; url-decode
+(test '"a" (url-decode "a"))
+(test '" " (url-decode "+"))
+(test '" " (url-decode "%20"))
+(test '" / " (url-decode "%20/%20"))
 

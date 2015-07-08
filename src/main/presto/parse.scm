@@ -27,11 +27,24 @@
             (list (list->string (reverse d))))
         (path-fix (string-split (list->string (reverse f)) #\.)))))
 
+; url-decode +=>" ", %XX=\xXX
 (define (url-decode path)
-  '("url" ("arguments" ("hello"))))
-
-;  (let ((parts (string-split path #\?)))
-;    (if (and (list? parts) (cdr parts) (string? (car (cdr parts))))
-;        (let ((arguments (string-split (cdr parts) #\&)))
-;  #f)
+  (let ((mode '())
+        (chars '()))
+    (string-for-each
+      (lambda (c)
+        (cond ((not (null? mode))
+               (if (not (eq? (length mode) 3))
+                   (set! mode (cons c mode))))
+              ((eq? c #\%)
+               (set! mode '(#\%)))
+              ((eq? c #\+)
+               (set! chars (cons #\space chars)))
+              (else
+               (set! chars (cons c chars))))
+        (cond ((and (not (null? mode)) (= (length mode) 3))
+               (set! chars (cons #\space chars))
+               (set! mode '()))))
+      path)
+    (list->string (reverse chars))))
 

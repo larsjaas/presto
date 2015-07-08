@@ -95,7 +95,7 @@
       (define response-headers headers)
       (let* ((request (string-split input))
              (method (car request))
-             (path (car (cdr request)))
+             (path (url-decode (car (cdr request))))
              (proto (car (cdr (cdr request))))
              (filename (valid-filename basedir path)))
         (cond ((and (equal? "GET" method) filename (file-regular? filename))
