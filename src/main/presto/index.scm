@@ -44,15 +44,11 @@
           (else num))))
 
 (define (get-file-size path)
-  (display path) (newline)
   (let ((fsize (file-size path)))
-    (display fsize) (newline)
     fsize))
 
 (define (get-file-date path)
-  (display path) (newline)
   (let ((mtime (file-modification-time path)))
-    (display mtime) (newline)
     mtime))
 
 (define (get-html-index basedir dir)
