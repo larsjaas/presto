@@ -51,6 +51,9 @@
   (let ((mtime (file-modification-time path)))
     mtime))
 
+
+
+
 (define (get-html-index basedir dir)
   (let* ((entries (sort-dir (path-join basedir dir)))
          (directories (car entries))
@@ -60,33 +63,55 @@
     (set! page
       (list "<html><head><title>Directory listing: " dir "</title></head>"
             "<body>" nl
-            "<ul>" nl))
+            "<tt>" nl
+            "<table width=\"100%\">" nl
+            "<thead>" nl))
 
     ; FIXME: set up a multiclickable path-bar
     (if (not (equal? dir "/"))
-        (let ((parent "/"))
-          (set! page (append page (list "<li><a href=\"" parent "\">Parent directory</a>")))))
+        (let ((path (string-split dir #\/)))
+          (set! page (append page (list "<tr><td align=\"right\" width=\"10%\"></td><td>")))
+          (let iter ((p path))
+            (cond ((null? p)
+                   #f)
+                  (else
+                    (set! page (append page (list "<a href=\"" (car p) "\">" (car p) "/</a>")))
+                    (iter (cdr p)))))
+          (set! page (append page (list "</td><td width=\"20%\"></td></tr>")))))
+
+    (set! page (append page (list
+            "<tr><td align=\"right\">Size</td><td>Name</td><td>Date</td></tr>" nl
+            "</thead>" nl
+            "<tbody>" nl)))
 
     (let iter ((inodes directories))
       (cond ((null? inodes) '())
             (else
-              (set! page (append page (list "<li>"
-                                            (index-time (get-file-date (path-join basedir dir (car inodes)))) " "
-                                            (index-size "-") " "
-                    "<a href=\"" (path-join basedir dir (car inodes)) "\">" (car inodes) "/</a>" nl)))
+              (set! page (append page
+                                 (list "<tr>"
+                                       "<td align=\"right\">"
+                                       (index-size "&lt;DIR&gt;") "</td>"
+                    "<td><a href=\"" (path-join dir (car inodes)) "\">" (car inodes) "/</a></td>"
+                    "<td>" (index-time (get-file-date (path-join basedir dir (car inodes)))) "</td></tr>" nl )))
               (iter (cdr inodes)))))
+
 
     (let iter ((inodes files))
       (cond ((null? inodes) '())
             (else
-              (set! page (append page (list "<li>"
-                                            (index-time (get-file-date (path-join basedir dir (car inodes)))) " "
-                                            (index-size (get-file-size (path-join basedir dir (car inodes)))) " "
-                    "<a href=\"" (path-join dir (car inodes)) "\">" (car inodes) "</a>" nl)))
+              (set! page (append page
+                                 (list "<tr>"
+                                       "<td align=\"right\">"
+                                       (index-size (get-file-size (path-join basedir dir (car inodes)))) "</td>"
+
+                    "<td><a href=\"" (path-join dir (car inodes)) "\">" (car inodes) "</a></td>"
+                    "<td>" (index-time (get-file-date (path-join basedir dir (car inodes)))) "</td></tr>" nl)))
               (iter (cdr inodes)))))
 
     (set! page (append page (list
-          "</ul>" nl
+          "</tbody>" nl
+          "</table>" nl
+          "</tt>" nl
           "</body></html>" nl)))
 
     (apply show #f page)))
