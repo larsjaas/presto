@@ -12,14 +12,13 @@
                     (iter #f (cdr elts)))))))
     (let ((d '())  ; directory path characters
           (f '())) ; filename characters
-      (string-map
+      (string-for-each
         (lambda (c)
           (cond ((eq? c #\/)
                   (set! d (cons c (append f d)))
                   (set! f '()))
                 (else
-                  (set! f (cons c f))))
-          c)
+                  (set! f (cons c f)))))
         path)
       (append
         (if (eq? '() d)
