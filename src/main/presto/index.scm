@@ -1,10 +1,9 @@
 ; TODO:
-; - file dates
-; - file sizes
-; - smart path-joiner function
-; - pathbar instead of "parent directory"
-; - support %-codes and + (at http.scm level)
+; - smart path-joiner function that avoids ///
 ; - generic filters in the api, and also sort function
+; - human-readable file sizes
+; - alternate sorting (date-sorting)
+
 
 (define (nodotfiles file)
   (not (eq? (string-ref file 0) #\.)))
@@ -52,7 +51,32 @@
     mtime))
 
 
+(define (get-path path)
+  (apply show #f
+    (let iter ((elts (string-split path #\/))
+               (parent "")
+               (first #t))
+      (cond ((null? elts) '())
+            ((and (not first) (equal? (car elts) ""))
+              (iter (cdr elts) parent #f))
+            (else
+              (cons
+                (string-append parent (car elts) "/")
+                (iter (cdr elts) "" #f)))))))
 
+(define (get-path-bar path)
+  ;(display path) (newline)
+  (apply show #f
+    (let iter ((elts (string-split path #\/))
+               (parent "")
+               (first #t))
+      (cond ((null? elts) '())
+            ((and (not first) (equal? (car elts) ""))
+              (iter (cdr elts) parent #f))
+            (else
+              (cons
+                (string-append "<a class=\"button\" href=\"" parent (car elts) "/" "\">" (car elts) "/</a>")
+                (iter (cdr elts) (string-append parent (car elts) "/") #f)))))))
 
 (define (get-html-index basedir dir)
   (let* ((entries (sort-dir (path-join basedir dir)))
@@ -61,26 +85,38 @@
          (page '())) ; FIXME: stuff in reversed order
 
     (set! page
-      (list "<html><head><title>Directory listing: " dir "</title></head>"
+      (list "<html>" nl
+            "<head>" nl
+            "<title>Directory listing: " (get-path dir) "</title>" nl
+            "<link rel=\"stylesheet\" type=\"text/css\" href=\"/css/index.css\">" nl
+            "</head>" nl
             "<body>" nl
             "<tt>" nl
             "<table width=\"100%\">" nl
             "<thead>" nl))
 
     ; FIXME: set up a multiclickable path-bar
-    (if (not (equal? dir "/"))
-        (let ((path (string-split dir #\/)))
-          (set! page (append page (list "<tr><td align=\"right\" width=\"10%\"></td><td>")))
-          (let iter ((p path))
-            (cond ((null? p)
-                   #f)
-                  (else
-                    (set! page (append page (list "<a href=\"" (car p) "\">" (car p) "/</a>")))
-                    (iter (cdr p)))))
-          (set! page (append page (list "</td><td width=\"20%\"></td></tr>")))))
+    ;(if (not (equal? dir "/"))
+    ;    (let ((path (string-split dir #\/)))
+    ;      (set! page (append page (list "<tr><td align=\"right\" width=\"10%\"></td><td>")))
+    ;      (let iter ((p path))
+    ;        (cond ((null? p)
+    ;               #f)
+    ;              (else
+    ;                (set! page (append page (list "<a href=\"" (car p) "\">" (car p) "/</a>")))
+    ;                (iter (cdr p)))))
+    ;      (set! page (append page (list "</td><td width=\"20%\"></td></tr>")))))
+    (set! page
+      (append page
+              (list "<tr><td align=\"right\" width=\"10%\"></td><td>"
+                    (get-path-bar dir)
+                    "</td><td width=\"20%\"></td></tr>")))
 
     (set! page (append page (list
-            "<tr><td align=\"right\">Size</td><td>Name</td><td>Date</td></tr>" nl
+            "<tr>"
+            "<td align=\"right\"><strong>Size</strong></td>"
+            "<td><strong>Name</strong></td>"
+            "<td><strong>Date</strong></td></tr>" nl
             "</thead>" nl
             "<tbody>" nl)))
 
