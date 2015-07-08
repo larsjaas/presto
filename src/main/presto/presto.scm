@@ -1,5 +1,5 @@
 
-(define *presto-version* '(0 0 5))
+(define *presto-version* '(0 0 6))
 
 (define (get-presto-version) *presto-version*)
 
