@@ -26,6 +26,8 @@
             (list (list->string (reverse d))))
         (path-fix (string-split (list->string (reverse f)) #\.)))))
 
+(define *hexdigits* "0123456789abcdef")
+
 ; url-decode +=>" ", %XX=\xXX
 (define (url-decode path)
   (let ((mode '())
@@ -42,7 +44,7 @@
               (else
                (set! chars (cons c chars))))
         (cond ((and (not (null? mode)) (= (length mode) 3))
-               (set! chars (cons #\space chars))
+               (set! chars (cons (integer->char (+ (* 16 (string-find *hexdigits* (char-downcase (cadr mode)))) (string-find *hexdigits* (char-downcase (car mode))))) chars))
                (set! mode '()))))
       path)
     (list->string (reverse chars))))

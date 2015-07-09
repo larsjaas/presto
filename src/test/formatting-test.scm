@@ -20,5 +20,13 @@
 (test "one;2;three" (join ";" '("one" "2" "three")))
 (test "a - b - c" (join " - " '("a" "b" "c")))
 
-; TODO: format-headers, but move to http/1.1 module
+; url-encode-string
+(test "abcdefgh" (url-encode-string "abcdefgh"))
+(test "ABCDEFGH" (url-encode-string "ABCDEFGH"))
+(test "1234" (url-encode-string "1234"))
+(test "+" (url-encode-string " "))
+(test "%2b" (url-encode-string "+"))
+(test "&" (url-encode-string "&"))
+(test "%3f" (url-encode-string "?"))
+(test "%23" (url-encode-string "#"))
 

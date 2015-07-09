@@ -1,4 +1,4 @@
 (define-library (presto formatting)
-  (import (chibi) (chibi show))
-  (export join version-string format-headers pad-02)
+  (import (srfi 38) (chibi) (chibi show) (chibi string))
+  (export join version-string format-headers pad-02 url-encode-string)
   (include "formatting.scm"))
