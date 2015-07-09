@@ -10,6 +10,7 @@
           (chibi string)
           (chibi filesystem)
           (chibi log)
+          (presto http 1.1)
           (presto parse)
           (presto index)
           (presto testsuite)

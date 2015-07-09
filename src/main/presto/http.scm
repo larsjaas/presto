@@ -32,38 +32,8 @@
             (set! headers `(("Content-Type" . ,type) . ,headers))))
     (cons headers (file->bytevector pathname))))
 
-(define (http/1.1-date-format seconds)
-  (define (weekday-string num)
-    (cond ((and (<= 0 num) (>= 8 num))
-           (list-ref (list "Sun" "Mon" "Tue" "Wed" "Thu" "Fri" "Sat" "Sun") num))
-          (else #f)))
-  (define (month-string num)
-    (cond ((and (<= 0 num) (>= 13 num))
-           (list-ref (list "Jan" "Feb" "Mar" "Apr" "May" "Jun" "Jul" "Aug" "Sep" "Oct" "Nov" "Dec") num))
-          (else #f)))
-  (let ((time (seconds->time seconds)))
-    (show #f (weekday-string (time-day-of-week time))
-             ", " (pad-02 (time-day time))
-             " " (month-string (time-month time))
-             " " (+ 1900 (time-year time))
-             " " (pad-02 (time-hour time))
-             ":" (pad-02 (time-minute time))
-             ":" (pad-02 (time-second time))
-             " GMT")))
 
-;  "Sun, 06 Nov 1994 08:49:37 GMT") ; FIXME
-
-(define (http/1.1-status-message status)
-  (cond ((eq? status 200) "OK")
-        ((eq? status 400) "Bad request")
-        ((eq? status 404) "File not found")
-        (else "Unknown request")))
-
-(define (http/1.1-status-line status)
-  (show #f "HTTP/1.1 "
-        (number->string status) " " (http/1.1-status-message status)))
-
-(define (http/1.1-error-page status)
+(define (html-error-page status)
   (string->utf8
     (show #f "<html>" nl
           "<head><title>" status " " (http/1.1-status-message status) "</title></head>" nl
@@ -120,7 +90,7 @@
                 #f)))
 
       (cond ((not status-ok)
-             (set! body (http/1.1-error-page status))
+             (set! body (html-error-page status))
              (set! response-headers (append response-headers (error-response-headers status)))))
 
       (if body
