@@ -64,6 +64,7 @@
                 (string-append parent (car elts) "/")
                 (iter (cdr elts) "" #f)))))))
 
+; add basedir which you don't link below
 (define (get-path-bar path)
   ;(display path) (newline)
   (apply show #f
@@ -95,17 +96,6 @@
             "<table width=\"100%\">" nl
             "<thead>" nl))
 
-    ; FIXME: set up a multiclickable path-bar
-    ;(if (not (equal? dir "/"))
-    ;    (let ((path (string-split dir #\/)))
-    ;      (set! page (append page (list "<tr><td align=\"right\" width=\"10%\"></td><td>")))
-    ;      (let iter ((p path))
-    ;        (cond ((null? p)
-    ;               #f)
-    ;              (else
-    ;                (set! page (append page (list "<a href=\"" (car p) "\">" (car p) "/</a>")))
-    ;                (iter (cdr p)))))
-    ;      (set! page (append page (list "</td><td width=\"20%\"></td></tr>")))))
     (set! page
       (append page
               (list "<tr><td align=\"right\" width=\"10%\"></td><td>"
