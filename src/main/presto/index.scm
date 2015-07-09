@@ -117,7 +117,7 @@
                                  (list "<tr>"
                                        "<td align=\"right\">"
                                        (index-size "&lt;DIR&gt;") "</td>"
-                    "<td><a href=\"" (path-join dir (car inodes)) "\">" (car inodes) "/</a></td>"
+                    "<td><a href=\"" (url-encode-string (path-join dir (car inodes))) "\">" (car inodes) "/</a></td>"
                     "<td>" (index-time (get-file-date (path-join basedir dir (car inodes)))) "</td></tr>" nl )))
               (iter (cdr inodes)))))
 
@@ -130,7 +130,7 @@
                                        "<td align=\"right\">"
                                        (index-size (get-file-size (path-join basedir dir (car inodes)))) "</td>"
 
-                    "<td><a href=\"" (path-join dir (car inodes)) "\">" (car inodes) "</a></td>"
+                    "<td><a href=\"" (url-encode-string (path-join dir (car inodes))) "\">" (car inodes) "</a></td>"
                     "<td>" (index-time (get-file-date (path-join basedir dir (car inodes)))) "</td></tr>" nl)))
               (iter (cdr inodes)))))
 
