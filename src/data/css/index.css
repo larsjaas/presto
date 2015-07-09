@@ -15,17 +15,18 @@
    box-shadow: rgba(0,0,0,1) 0 1px 0;
    text-shadow: rgba(0,0,0,.4) 0 1px 0;
    color: white;
-   font-size: 11px;
-   font-family: 'Lucida Grande', Helvetica, Arial, Sans-Serif;
+/* font-size: 11px; */
+/* font-family: 'Lucida Grande', Helvetica, Arial, Sans-Serif; */
+   margin-right: 1px;
    text-decoration: none;
    vertical-align: middle;
-   }
+}
 .button:hover {
    border-top-color: #28597a;
    background: #28597a;
    color: #ccc;
-   }
+}
 .button:active {
    border-top-color: #1b435e;
    background: #1b435e;
-   }
+}
