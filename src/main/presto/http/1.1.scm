@@ -67,3 +67,31 @@
              ":" (pad-02 (time-minute time))
              ":" (pad-02 (time-second time))
              " GMT")))
+
+(define (chop str)
+  (let ((first 0)
+        (last (- (string-length str) 1)))
+    (let iter ((peek (string-ref str first)))
+      (cond ((or (eq? peek #\space) (eq? peek #\tab))
+              (set! first (+ first 1))
+              (iter (string-ref str first)))))
+    (let iter ((peek (string-ref str last)))
+      (cond ((or (eq? peek #\space) (eq? peek #\tab))
+              (set! last (- last 1))
+              (iter (string-ref str last)))))
+    (substring str first (+ last 1))))
+
+; FIXME: continuation lines..
+(define (parse-header-line line)
+  (let ((parts (string-split line #\: 2)))
+    (cond ((= (length parts) 2)
+            (cons (car parts) (chop (cadr parts))))
+          (else '()))))
+
+(define (http/1.1-read-headers port)
+  (let iter ((line (read-line port)))
+    (cond ((equal? "" line)
+            '())
+          (else
+            (cons (parse-header-line line) (iter (read-line port)))))))
+
