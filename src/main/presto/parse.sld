@@ -1,5 +1,5 @@
 (define-library (presto parse)
   (import (chibi)
           (chibi string))
-  (export path-split url-decode)
+  (export path-split url-decode url-arguments)
   (include "parse.scm"))

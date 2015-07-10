@@ -28,5 +28,14 @@
 (test '" " (url-decode "%20"))
 (test '" / " (url-decode "%20/%20"))
 
+; url-arguments
+(test '() (url-arguments "abc"))
+(test '(("hei")) (url-arguments "abc?hei"))
+(test '(("hei" . "on") ("patch") ("expr" . "x=2y"))
+                       (url-arguments "http://host:port/path/prog.cgi?hei=on&patch&expr=x=2y"))
+
 (define (main args)
-  (newline))
+  (newline)
+  ;(display (url-arguments "http://host:port/path/prog.cgi?hei=on&patch&expr=x=2y"))
+  ;(newline)
+  )

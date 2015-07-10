@@ -49,3 +49,16 @@
       path)
     (list->string (reverse chars))))
 
+(define (url-arguments url)
+  (define (list->pair l)
+    (cond ((and (pair? l) (= (length l) 2))
+           (cons (car l) (cadr l)))
+          (else l)))
+  (let ((strings (string-split url #\? 2)))
+    (if (= 2 (length strings))
+      (let iter ((parts (string-split (cadr strings) #\&)))
+        (cond ((null? parts) '())
+              (else
+                (cons (list->pair (string-split (car parts) #\= 2))
+                      (iter (cdr parts))))))
+      '())))
