@@ -1,3 +1,5 @@
+#!/usr/bin/env chibi-scheme -r
+
 (import (chibi)
         (chibi string)
         (chibi test))
@@ -26,3 +28,5 @@
 (test '" " (url-decode "%20"))
 (test '" / " (url-decode "%20/%20"))
 
+(define (main args)
+  (newline))

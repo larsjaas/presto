@@ -1,3 +1,5 @@
+#!/usr/bin/env chibi-scheme -r
+
 (import (chibi)
         (chibi test))
 (import (presto formatting))
@@ -30,3 +32,5 @@
 (test "%3f" (url-encode-string "?"))
 (test "%23" (url-encode-string "#"))
 
+(define (main args)
+  (newline))

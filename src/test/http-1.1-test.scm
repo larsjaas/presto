@@ -1,3 +1,5 @@
+#!/usr/bin/env chibi-scheme -r
+
 (import (chibi)
         (chibi test))
 (import (presto http 1.1))
@@ -15,3 +17,5 @@
 
 ; TODO: http/1.1-date-parse
 
+(define (main args)
+  (newline))
