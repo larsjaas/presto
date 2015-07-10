@@ -1,10 +1,11 @@
-#! /usr/bin/env TERM= chibi-scheme -r
+#!/usr/bin/env TERM= chibi-scheme -r
 
 (import (chibi)
         (chibi string)
         (chibi config))
 (import (srfi 18)) ; make-thread
 (import (presto)
+        (presto config)
         (presto logging)
         (presto formatting)
         (presto http))
@@ -37,6 +38,8 @@
 (define (main arguments)
   (set! *config* (conf-load "presto.conf"))
   (update-config-settings (cddr arguments))
+
+  (set-config! *config*)
 
   ; set up all pre-initialize settings, before initialize-calls fetches and
   ; starts using the values
