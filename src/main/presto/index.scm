@@ -76,7 +76,7 @@
               (iter (cdr elts) parent #f))
             (else
               (cons
-                (string-append "<a class=\"button\" href=\"" parent (car elts) "/" "\">" (car elts) "/</a>")
+                (string-append "<a class=\"button\" href=\"" (get-path (string-append parent (car elts) "/")) "\">" (car elts) "/</a>")
                 (iter (cdr elts) (string-append parent (car elts) "/") #f)))))))
 
 (define (get-html-index basedir dir)
@@ -99,7 +99,7 @@
     (set! page
       (append page
               (list "<tr><td align=\"right\" width=\"10%\"></td><td>"
-                    (get-path-bar dir)
+                    (get-path-bar (get-path dir))
                     "</td><td width=\"20%\"></td></tr>")))
 
     (set! page (append page (list
@@ -117,7 +117,7 @@
                                  (list "<tr>"
                                        "<td align=\"right\">"
                                        (index-size "&lt;DIR&gt;") "</td>"
-                    "<td><a href=\"" (url-encode-string (path-join dir (car inodes))) "\">" (car inodes) "/</a></td>"
+                    "<td><a href=\"" (url-encode-string (get-path (path-join dir (car inodes)))) "\">" (car inodes) "/</a></td>"
                     "<td>" (index-time (get-file-date (path-join basedir dir (car inodes)))) "</td></tr>" nl )))
               (iter (cdr inodes)))))
 
@@ -130,7 +130,7 @@
                                        "<td align=\"right\">"
                                        (index-size (get-file-size (path-join basedir dir (car inodes)))) "</td>"
 
-                    "<td><a href=\"" (url-encode-string (path-join dir (car inodes))) "\">" (car inodes) "</a></td>"
+                    "<td><a href=\"" (url-encode-string (car inodes)) "\">" (car inodes) "</a></td>"
                     "<td>" (index-time (get-file-date (path-join basedir dir (car inodes)))) "</td></tr>" nl)))
               (iter (cdr inodes)))))
 
