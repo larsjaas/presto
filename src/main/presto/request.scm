@@ -1,0 +1,22 @@
+(define (make-request method path proto headerset)
+  (let* ((method method)
+         (path path)
+         (proto proto)
+         (headers headerset))
+    (define (get-method) method)
+    (define (get-proto) proto)
+    (define (get-path) path)
+    (define (get-headers) headers)
+
+    (lambda (dispatch . args)
+      (cond ((eq? dispatch 'get-method)
+              (apply get-method args))
+            ((eq? dispatch 'get-proto)
+              (apply get-proto args))
+            ((eq? dispatch 'get-path)
+              (apply get-path args))
+            ((eq? dispatch 'get-headers)
+              (apply get-headers args))
+            (else
+              '())))))
+
