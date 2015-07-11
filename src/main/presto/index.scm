@@ -79,8 +79,10 @@
                 (string-append "<a class=\"button\" href=\"" (get-path (string-append parent (car elts) "/")) "\">" (car elts) "/</a>")
                 (iter (cdr elts) (string-append parent (car elts) "/") #f)))))))
 
-(define (get-html-index basedir dir)
-  (let* ((entries (sort-dir (path-join basedir dir)))
+(define (get-html-index request)
+  (let* ((basedir (get-htdocs-root))
+         (dir (request 'get-path))
+         (entries (sort-dir (path-join basedir dir)))
          (directories (car entries))
          (files (cadr entries))
          (page '())) ; FIXME: stuff in reversed order
@@ -103,6 +105,7 @@
                     "</td><td width=\"20%\"></td></tr>")))
 
     (set! page (append page (list
+            "<tr height=\"3px\"></tr>"
             "<tr>"
             "<td align=\"right\"><strong>Size</strong></td>"
             "<td><strong>Name</strong></td>"
@@ -140,5 +143,14 @@
           "</tt>" nl
           "</body></html>" nl)))
 
-    (apply show #f page)))
+    (let* ((host (request 'get-header 'host))
+           (dirlocation (if (and host dir) (string-append "//" host dir "/") "")))
+      (if (and dir (not (char=? (string-ref dir (- (string-length dir) 1)) #\/)))
+          (list 301
+                `(("Location" . ,dirlocation)
+                  ("Method" . ,(request 'get-method)))
+                (html-error-page 301))
+          (list 200
+                '(("Content-Type" . ("text/html" "charset=utf-8")))
+                (string->utf8 (apply show #f page)))))))
 

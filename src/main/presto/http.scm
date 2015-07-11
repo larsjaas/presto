@@ -3,22 +3,23 @@
 (define *alog* #f)
 (define *elog* #f)
 
-(define *version* "")
-
-
 (define (http-initialize)
   (set! *alog* (get-access-log-logger))
   (set! *elog* (get-error-log-logger)))
 
 (define (valid-filename basedir path)
   (let ((filename (string-append basedir path))
-        (index (string-append basedir path "/index.html")))
-    (if (and (file-directory? filename)
-             (file-exists? index))
-        (set! filename index))
-    (if (and (file-exists? filename)
-             (file-is-readable? filename))
-        filename
+        (index #f))
+    (if (not (and (file-exists? filename) (file-regular? filename)))
+      (let iter ((indices (get-index-order)))
+        (cond ((null? indices) index)
+              ((not (and index (file-exists? index)))
+                (set! index (string-append basedir path "/" (car indices)))
+                (iter (cdr indices)))))
+      (set! index filename))
+    (if (and (file-exists? index)
+             (file-is-readable? index))
+        index
         #f)))
 
 (define (file-read pathname)
@@ -33,15 +34,17 @@
     (cons headers (file->bytevector pathname))))
 
 
-(define (html-error-page status)
-  (string->utf8
-    (show #f "<html>" nl
-          "<head><title>" status " " (http/1.1-status-message status) "</title></head>" nl
-          "<body bgcolor=\"white\">" nl
-          "<center><h1>" status " " (http/1.1-status-message status) "</h1></center>" nl
-          "<hr><center>presto/" *version* "</center>" nl
-          "</body>" nl
-          "</html>" nl)))
+(define (make-import-environment)
+  (let ((env (make-environment)))
+    (%import env (current-environment) '(import) #t)
+    env))
+
+; FIXME: guard call/cc wrt exceptions as with the testsuite
+; FIXME: cache environment, filename, and file timestamp to avoid repeated loads
+(define (eval-module file request)
+  (let ((env (make-import-environment)))
+    (load file env)
+    (eval `(application ,request) env)))
 
 (define (error-response-headers status)
   `(("Date" . ,(http/1.1-date-format (current-seconds)))
@@ -49,7 +52,6 @@
 
 (define (http-server port headers basedir)
   (define *sock* (make-listener-socket (get-address-info "loopback" port)))
-  (set! *version* (car (reverse (string-split (cdr (assoc "Server" headers)) #\/))))
   (set-socket-option! *sock* level/socket socket-opt/reuseaddr 1)
   (let mainloop ()
     (let* ((*addr* (make-sockaddr))
@@ -61,28 +63,44 @@
       (define status 200)
       (define status-ok #t)
       (define request-headers '())
+      (define request '())
       (define response-headers headers)
       (let* ((request (string-split input))
              (method (car request))
              (path (url-decode (car (cdr request))))
              (proto (car (cdr (cdr request))))
              (args (url-arguments path))
-             (filename (valid-filename basedir path)))
+             (filename (valid-filename basedir path))
+             (components (if filename (path-split filename) '())))
 
         (if (equal? proto "HTTP/1.1")
             (set! request-headers (http/1.1-read-headers in)))
         (close-input-port in)
+        (set! request (make-request method path proto request-headers))
 
-        (cond ((and (equal? "GET" method) filename (file-regular? filename))
+        (cond ((and (equal? "GET" method)
+                    filename
+                    (file-exists? filename)
+                    (equal? (car (reverse components)) ".scm"))
+                (let ((response (eval-module filename request)))
+                  (set! status (car response))
+                  (set! response-headers (cons (cadr response) response-headers))
+                  (set! body (car (cdr (cdr response))))))
+              ((and (equal? "GET" method)
+                    filename
+                    (file-exists? filename)
+                    (file-regular? filename))
                 (let ((fileinfo (file-read filename)))
                   (set! body (cdr fileinfo))
                   (if (eq? '() (car fileinfo))
                       #t
                       (set! response-headers (append response-headers (car fileinfo))))))
               ((and (equal? "GET" method) filename (file-directory? filename))
-                (set! response-headers (append response-headers
-                                              `(("Content-Type" . "text/html"))))
-                (set! body (string->utf8 (get-html-index basedir path))))
+                (let ((response (get-html-index request)))
+                  (set! status (car response))
+                  (set! response-headers (append response-headers
+                                                 (cadr response)))
+                  (set! body (car (cdr (cdr response))))))
               ((and (equal? "GET" method) (equal? "/testsuite" path))
                 (set! response-headers (append response-headers
                                               `(("Content-Type" . "text/plain"))))
