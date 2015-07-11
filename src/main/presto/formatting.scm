@@ -17,6 +17,9 @@
 (define (format-headers headers)
   (let iter ((headrs headers))
     (cond ((eq? headrs '()) `(,nl))
+          ((pair? (cdr (car headrs)))
+            (append `(,(car (car headrs)) ": " ,(join ";" (cdr (car headrs))) ,nl)
+                    (iter (cdr headrs))))
           (else (append `(,(car (car headrs)) ": " ,(cdr (car headrs)) ,nl)
                         (iter (cdr headrs)))))))
 
