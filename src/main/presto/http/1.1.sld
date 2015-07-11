@@ -1,5 +1,6 @@
 (define-library (presto http 1.1)
-  (import (chibi)
+  (import (scheme small)
+          (chibi)
           (chibi io)
           (chibi show)
           (chibi string)

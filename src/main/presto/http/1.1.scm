@@ -81,11 +81,11 @@
               (iter (string-ref str last)))))
     (substring str first (+ last 1))))
 
-; FIXME: continuation lines..
+; FIXME: support continuation lines..
 (define (parse-header-line line)
   (let ((parts (string-split line #\: 2)))
     (cond ((= (length parts) 2)
-            (cons (car parts) (chop (cadr parts))))
+            (cons (string->symbol (string-downcase (car parts))) (chop (cadr parts))))
           (else '()))))
 
 (define (http/1.1-read-headers port)
