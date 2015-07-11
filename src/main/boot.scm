@@ -29,11 +29,11 @@
                          (set! *config* (conf-set *config* optionsym value))))
                   (iter (cdr args))))))))
 
-(define responder
-  (make-thread
-    (lambda ()
-      (presto-httpd (conf-get *config* 'htdocs-root)
-                    (conf-get *config* 'http-port)))))
+(define (responder-task)
+  (presto-httpd (conf-get *config* 'htdocs-root)
+                (conf-get *config* 'http-port)))
+
+(define responder (make-thread responder-task))
 
 (define (main arguments)
   (set! *config* (conf-load "presto.conf"))
@@ -58,5 +58,9 @@
 
   (presto-initialize)
 
-  (thread-start! responder)
-  (thread-join! responder))
+  (if (conf-get *config* 'main-thread)
+      (responder-task)
+      (begin
+        (thread-start! responder)
+        (thread-join! responder)))
+  )
