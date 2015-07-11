@@ -84,7 +84,7 @@
                     (equal? (car (reverse components)) ".scm"))
                 (let ((response (eval-module filename request)))
                   (set! status (car response))
-                  (set! response-headers (cons (cadr response) response-headers))
+                  (set! response-headers (append (cadr response) response-headers))
                   (set! body (car (cdr (cdr response))))))
               ((and (equal? "GET" method)
                     filename
