@@ -33,6 +33,23 @@
             (set! headers `(("Content-Type" . ,type) . ,headers))))
     (cons headers (file->bytevector pathname))))
 
+(define *module-cache* '())
+
+(define (update-module-cache file mtime env)
+  (let ((copy '())
+        (found #f))
+    (let iter ((cache *module-cache*))
+      (cond ((null? cache)
+              (if (not found)
+                  (set! copy (cons (list file mtime env) copy)))
+              (set! *module-cache* (reverse copy)))
+            ((equal? (car (car cache)) file)
+              (set! copy (cons (list file mtime env) copy))
+              (set! found #t)
+              (iter (cdr cache)))
+            (else
+              (set! copy (car cache))
+              (iter (cdr cache)))))))
 
 (define (make-import-environment)
   (let ((env (make-environment)))
@@ -40,11 +57,21 @@
     env))
 
 ; FIXME: guard call/cc wrt exceptions as with the testsuite
-; FIXME: cache environment, filename, and file timestamp to avoid repeated loads
+
 (define (eval-module file request)
-  (let ((env (make-import-environment)))
-    (load file env)
-    (eval `(application ,request) env)))
+  (let ((mtime (file-modification-time file))
+        (cached (assoc file *module-cache*)))
+    (cond ((or (not cached)
+               (and cached (> mtime (list-ref cached 1))))
+            ; update the module cache
+            (let ((env (make-import-environment)))
+              (load file env)
+              (update-module-cache file mtime env)
+              (eval `(application ,request) env)))
+          (else
+            ; reuse the module from the cache
+            (let ((env (list-ref cached 2)))
+              (eval `(application ,request) env))))))
 
 (define (error-response-headers status)
   `(("Date" . ,(http/1.1-date-format (current-seconds)))
