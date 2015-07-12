@@ -163,7 +163,7 @@
         (or (not (char=? (car c) #\"))
             (and (char=? (car c) #\")
                  (= 1 (modulo (repeat-count (cdr c) #\\) 2)))))
-      (let ((val (advance continue? idx)))
+      (let ((val (advance continue? (+ idx 1))))
         (cons (string-dequote val) (+ (string-length val) 2))))
 
     (define (read-array-from idx)
@@ -175,13 +175,11 @@
                 ((char-whitespace? (vector-ref data i))
                   (iter (+ i 1)))
                 ((char=? (vector-ref data i) #\])
-                  (cons (reverse array) (- i idx -1)))
+                  (cons (reverse array) (- i idx -2)))
                 (else
                   (let ((readval (read-value-from i)))
                     (set! array (cons (car readval) array))
-                    (set! i (+ i (cdr readval)))
-
-                    (let scan ((pos i)) ; scan until , or ]
+                    (let scan ((pos (+ i (cdr readval)))) ; scan until , or ]
                       (cond ((>= pos end-idx)
                               '())
                             ((char-whitespace? (vector-ref data pos))
@@ -196,7 +194,49 @@
                 ))))
 
     (define (read-object-from idx)
-      (cons '() 0))
+      (let ((object '()))
+        (let iter ((i idx))
+          (cond ((>= i end-idx)
+                  (raise (string-append "invalid json at char "
+                                        (number->string i))))
+                ((char-whitespace? (vector-ref data i))
+                  (iter (+ i 1)))
+                ((char=? (vector-ref data i) #\})
+                  (cons (reverse object) (- i idx -1)))
+                ((char=? (vector-ref data i) #\")
+                  (let ((stringval (read-string-from i)))
+                    (let scan ((pos (+ i (cdr stringval))))
+                      (cond ((>= pos end-idx)
+                              (raise (string-append "invalid json at char "
+                                                    (number->string pos))))
+                            ((char-whitespace? (vector-ref data pos))
+                              (scan (+ pos 1)))
+                            ((char=? (vector-ref data pos) #\:)
+                              (let ((readval (read-value-from (+ pos 1))))
+                                (set! object (cons (cons (car stringval) (car readval))
+                                                   object))
+                                (let cont ((pos2 (+ pos (cdr readval) 1)))
+                                  (cond ((>= pos2 end-idx)
+                                          (raise (string-append "invalid json at pos "
+                                                                (number->string pos2))))
+                                        ((char-whitespace? (vector-ref data pos2))
+                                          (cont (+ pos2 1)))
+                                        ((char=? (vector-ref data pos2) #\,)
+                                          (iter (+ pos2 1)))
+                                        ((char=? (vector-ref data pos2) #\})
+                                          (iter pos2))
+                                        (else
+                                          (raise (string-append "invalid json at char "
+                                                                (number->string pos2))))))))
+                            (else
+                              (raise (string-append "invalid json at char "
+                                                    (number->string pos))))
+                            ))))
+
+                (else
+                  (raise (string-append "invalid json at char "
+                         (number->string i))))
+                ))))
 
     (define (read-value-from idx)
       (let iter ((i idx))
@@ -209,9 +249,8 @@
                 (let ((readval (read-number-from i)))
                   readval))
               ((char=? (vector-ref data i) #\")
-                (let ((readval (read-string-from (+ i 1))))
-                  (cons (string-dequote (car readval))
-                        (+ (string-length (car readval)) 2))))
+                (let ((readval (read-string-from i)))
+                  readval))
               ((and (begins-with #(#\t #\r #\u #\e) data i)
                     (or (>= (+ i 4) end-idx)
                         (char-separator? (vector-ref data (+ i 4)))))
