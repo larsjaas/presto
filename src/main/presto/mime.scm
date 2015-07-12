@@ -6,6 +6,7 @@
         ((equal? ".css" ext) "text/css")
         ((equal? ".png" ext) "image/png")
         ((equal? ".jpg" ext) "image/jpeg")
+        ((equal? ".pdf" ext) "application/pdf")
         ((equal? ".js" ext) "application/javascript")
         (else #f)))
 
