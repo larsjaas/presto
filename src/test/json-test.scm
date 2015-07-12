@@ -20,7 +20,29 @@
       (sexp->json '(("key1" . "value1") ("key2" . "value2"))))
 (test "[true,false]" (sexp->json '(#t #f)))
 
+; json->sexp
+(test 5 (json->sexp "5"))
+(test 1235 (json->sexp "1235"))
+(test -42 (json->sexp "-42"))
+(test 1235 (json->sexp "  \n1235"))
+(test "" (json->sexp "\"\""))
+(test "a" (json->sexp "\"a\""))
+(test "a\"" (json->sexp "\"a\\\"\"")) ; ugly!
+(test #t (json->sexp " true"))
+(test #f (json->sexp "false"))
+(test '(1 2) (json->sexp "[1,2]"))
+
+; (test '() (json->sexp "{}"))
+; (test '() (json->sexp "()"))
+; (test #t (json->sexp "true"))
+; (test #f (json->sexp "false"))
+; (test '(1 2 3) (json->sexp "[1,2,3]"))
+
 (define (main args)
-  ;(newline)
+  (newline)
+  ;(display (json->sexp "[1,2]")) (newline)
+  ;(display (json->sexp "\"a\\\"\"")) (newline)
+  ;(display (json->sexp " \"a\"")) (newline)
+  ;(display (json->sexp "[1,2,3]")) (newline)
   ;(display (sexp->json '(("key1" . "value1") ("key2" . "value2"))))
   (newline))
