@@ -97,6 +97,19 @@
                 (set! special #f)
                 (cond ((char=? c #\n)
                         (set! chars (cons #\newline chars)))
+                      ((char=? c #\r)
+                        (set! chars (cons #\return chars)))
+                      ((char=? c #\t)
+                        (set! chars (cons #\tab chars)))
+                      ((char=? c #\b)
+                        (set! chars (cons (integer->char 8) chars)))
+                      ((char=? c #\f)
+                        (set! chars (cons (integer->char 12) chars)))
+                      ((char=? c #\u) ; just preserve the unicode encoding
+                        (set! chars (cons #\\ chars)))
+                        (set! chars (cons c chars)))
+;                     ((char=? c #\u)
+;                       ... read 4 hex digits as unicode character
                       (else
                         (set! chars (cons c chars)))))
               ((char=? c #\\)
