@@ -1,3 +1,7 @@
+; TODO:
+; - read full range of number types, not just integers
+; - decode encoded unicode characters in strings
+; - pretty formatting of json output
 
 (define *elog* '())
 
