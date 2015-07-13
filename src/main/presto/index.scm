@@ -1,9 +1,15 @@
 ; TODO:
+; - optimize redirect
 ; - smart path-joiner function that avoids ///
 ; - generic filters in the api, and also sort function
 ; - human-readable file sizes
 ; - alternate sorting (date-sorting)
-
+; - move styling to css file
+; - use css/ul/li for table layout
+; - keep header/footer static with scrolling middle
+; - colorize (grey <DIR>, highlight under pointer, ++)
+; - rename index.css to presto.css
+; - stuff page html in reverse and flip on generation
 
 (define (nodotfiles file)
   (not (eq? (string-ref file 0) #\.)))
@@ -79,7 +85,25 @@
                 (string-append "<a class=\"button\" href=\"" (get-path (string-append parent (car elts) "/")) "\">" (car elts) "/</a>")
                 (iter (cdr elts) (string-append parent (car elts) "/") #f)))))))
 
+(define (get-directory-redirect request)
+  (let* ((dir (request 'get-path))
+         (host (request 'get-header 'host))
+         (dirlocation (if (and host dir) (string-append "//" host dir "/") "")))
+    (list 301
+          `(("Location" . ,dirlocation)
+           ("Method" . ,(request 'get-method)))
+          (html-error-page 301))))
+
+(define (ends-with-slash? pathstr)
+  (char=? (string-ref pathstr (- (string-length pathstr) 1)) #\/))
+
 (define (get-html-index request)
+  (cond ((ends-with-slash? (request 'get-path))
+          (get-html-directory-listing request))
+        (else
+          (get-directory-redirect request))))
+
+(define (get-html-directory-listing request)
   (let* ((basedir (get-htdocs-root))
          (dir (request 'get-path))
          (entries (sort-dir (path-join basedir dir)))
@@ -143,14 +167,7 @@
           "</tt>" nl
           "</body></html>" nl)))
 
-    (let* ((host (request 'get-header 'host))
-           (dirlocation (if (and host dir) (string-append "//" host dir "/") "")))
-      (if (and dir (not (char=? (string-ref dir (- (string-length dir) 1)) #\/)))
-          (list 301
-                `(("Location" . ,dirlocation)
-                  ("Method" . ,(request 'get-method)))
-                (html-error-page 301))
-          (list 200
-                '(("Content-Type" . ("text/html" "charset=utf-8")))
-                (string->utf8 (apply show #f page)))))))
+    (list 200
+          '(("Content-Type" . ("text/html" "charset=utf-8")))
+          (string->utf8 (apply show #f page)))))
 
