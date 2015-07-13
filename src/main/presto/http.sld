@@ -16,7 +16,6 @@
           (presto htmlutils)
           (presto http 1.1)
           (presto parse)
-          (presto testsuite)
           (presto version)
           (presto logging)
           (presto request)

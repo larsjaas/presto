@@ -46,11 +46,11 @@
                   (set! copy (cons (list file mtime env) copy)))
               (reverse copy))
             ((equal? (car (car cache)) file)
-              (set! copy (cons (list file mtime env) copy))
               (set! found #t)
+              (set! copy (cons (list file mtime env) copy))
               (iter (cdr cache)))
             (else
-              (set! copy (car cache))
+              (set! copy (cons (car cache) '()))
               (iter (cdr cache)))))))
 
 (define (update-module-cache file mtime env)
@@ -88,19 +88,20 @@
     (update-handler-cache file mtime env)))
 
 (define (load-handlers)
-  (let ((pathlist (conf-get (get-config) 'handler-path)))
+  (let pathiter ((pathlist (conf-get (get-config) 'handler-path)))
     (cond ((not (null? pathlist))
-            (let ((files (directory-files (car pathlist))))
+            (let fileiter ((files (directory-files (car pathlist))))
               (cond ((not (null? files))
                       (let ((p (path-join (car pathlist) (car files))))
                         (if (and (file-regular? p)
                                  (string=? (car (reverse (path-split p))) ".scm"))
-                            (load-handler p))))))))))
+                            (load-handler p)))
+                      (fileiter (cdr files)))))
+            (pathiter (cdr pathlist))))))
 
 (define (find-handler request)
   (let iter ((handlers *handler-cache*))
-    (cond ((null? handlers)
-            #f)
+    (cond ((null? handlers) #f)
           (else
             (let* ((handler (car handlers))
                    (file (list-ref handler 0))
@@ -180,11 +181,6 @@
                   (set! response-headers (append (list-ref response 1)
                                                  response-headers))
                   (set! body (list-ref response 2))))
-              ((and (equal? "GET" method) (equal? "/testsuite" path))
-                (set! response-headers (append response-headers
-                                              `(("Content-Type" . "text/plain"))))
-                (set! body (string->utf8 (call-with-output-string testsuite)))
-                )
               (else
                 (set! status 404)
                 (set! status-ok #f)
