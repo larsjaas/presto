@@ -38,24 +38,16 @@
 (define (index-time seconds)
   (let ((time (seconds->time seconds)))
     (show #f (+ 1900 (time-year time)) "-"
-          (pad-02 (time-month time)) "-" (pad-02 (time-day time)) " "
+          (pad-02 (time-month time)) "-" (pad-02 (time-day time)) "&nbsp;"
           (pad-02 (time-hour time)) ":" (pad-02 (time-minute time)) ":"
           (pad-02 (time-second time)))))
 
 (define (index-size size)
-  (let iter ((num (if (string? size) size (number->string size))))
-    (cond ((> 9 (string-length num))
-           (iter (string-append " " num)))
-          (else num))))
+  (number->string size))
 
 (define (get-file-size path)
   (let ((fsize (file-size path)))
     fsize))
-
-(define (get-file-date path)
-  (let ((mtime (file-modification-time path)))
-    mtime))
-
 
 (define (get-path path)
   (apply show #f
@@ -121,48 +113,67 @@
        "<head>" nl
        "<title>Directory listing: " (get-path dir) "</title>" nl
        "<link rel=\"stylesheet\" type=\"text/css\" href=\"/css/presto.css\">" nl
-       "</head>" nl
-       "<body>" nl
-       "<tt>" nl
-       "<table width=\"100%\">" nl
-       "<thead>" nl)
+       "</head>" nl)
 
-    (w "<tr><td align=\"right\" width=\"10%\"></td><td>"
-       (get-path-bar (get-path dir))
-       "</td><td width=\"20%\"></td></tr>")
+    (w "<body>" nl
+       "<tt>" nl)
 
-    (w "<tr height=\"3px\"></tr>"
-       "<tr>"
-       "<td align=\"right\"><strong>Size</strong></td>"
-       "<td><strong>Name</strong></td>"
-       "<td><strong>Date</strong></td></tr>" nl
-       "</thead>" nl
-       "<tbody>" nl)
+    (w "<ul class=\"dirlist\">" nl)
+
+    (w "<ul class=\"direntry pathbar\">" nl
+       "<li class=\"size\">" nl
+       "<li class=\"name\">" (get-path-bar (get-path dir)) nl
+       "<li class=\"mdate\">" nl
+       "<li class=\"adate\">" nl
+       "<li class=\"cdate\">" nl
+       "</ul>" nl)
+
+    (w "<ul class=\"direntry header\">" nl
+       "<li class=\"size\">Size" nl
+       "<li class=\"name\">Name" nl
+       "<li class=\"mdate\">Date" nl
+       "<li class=\"adate\">Date" nl
+       "<li class=\"cdate\">Date" nl
+       "</ul>" nl)
+
+    (w "<ul class=\"direntry spacing\">" nl
+       "</ul>" nl)
 
     (let iter ((inodes directories))
-      (cond ((null? inodes) '())
-            (else
-              (w "<tr>"
-                 "<td align=\"right\">"
-                 (index-size "&lt;DIR&gt;") "</td>"
-                 "<td><a href=\"" (url-encode-string (get-path (path-join dir (car inodes)))) "\">" (car inodes) "/</a></td>"
-                 "<td>" (index-time (get-file-date (path-join basedir dir (car inodes)))) "</td></tr>" nl)
+      (cond ((not (null? inodes))
+              (w "<ul class=\"direntry\">" nl
+                 "<li class=\"size dir\">&lt;DIR&gt;" nl
+                 "<li class=\"name\">"
+                 "<a href=\"" (url-encode-string (get-path (path-join dir (car inodes))))
+                 "\">" (car inodes) "/</a>" nl
+                 "<li class=\"mdate\">"
+                 (index-time (file-modification-time (path-join basedir dir (car inodes)))) nl
+                 "<li class=\"adate\">"
+                 (index-time (file-access-time (path-join basedir dir (car inodes)))) nl
+                 "<li class=\"cdate\">"
+                 (index-time (file-change-time (path-join basedir dir (car inodes)))) nl
+                 "</ul>" nl)
               (iter (cdr inodes)))))
-
 
     (let iter ((inodes files))
-      (cond ((null? inodes) '())
-            (else
-              (w "<tr>"
-                 "<td align=\"right\">"
-                 (index-size (get-file-size (path-join basedir dir (car inodes)))) "</td>"
-                 "<td><a href=\"" (url-encode-string (car inodes)) "\">" (car inodes) "</a></td>"
-                 "<td>" (index-time (get-file-date (path-join basedir dir (car inodes)))) "</td></tr>" nl)
+      (cond ((not (null? inodes))
+              (w "<ul class=\"direntry\">" nl
+                 "<li class=\"size file\">"
+                 (index-size (get-file-size (path-join basedir dir (car inodes)))) nl
+                 "<li class=\"name\">"
+                 "<a href=\"" (url-encode-string (car inodes)) "\">" (car inodes) "</a>" nl
+                 "<li class=\"mdate\">"
+                 (index-time (file-modification-time (path-join basedir dir (car inodes)))) nl
+                 "<li class=\"adate\">"
+                 (index-time (file-access-time (path-join basedir dir (car inodes)))) nl
+                 "<li class=\"cdate\">"
+                 (index-time (file-change-time (path-join basedir dir (car inodes)))) nl
+                 "</ul>" nl)
               (iter (cdr inodes)))))
 
-    (w "</tbody>" nl
-       "</table>" nl
-       "</tt>" nl
+
+    (w "</ul>" nl)
+    (w "</tt>" nl
        "</body></html>" nl)
 
     (list 200
