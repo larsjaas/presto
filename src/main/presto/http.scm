@@ -157,21 +157,7 @@
         (set! request (make-request method path proto request-headers))
         (set! handler (find-handler request))
 
-        (cond (handler
-                (let ((response (eval-handler handler request)))
-                  (set! status (list-ref response 0))
-                  (set! response-headers (append (list-ref response 1)
-                                                 response-headers))
-                  (set! body (list-ref response 2))))
-              ((and (equal? "GET" method) ; FIXME: separate handler
-                    filename
-                    (file-exists? filename)
-                    (equal? (car (reverse components)) ".scm"))
-                (let ((response (eval-module filename request)))
-                  (set! status (car response))
-                  (set! response-headers (append (cadr response) response-headers))
-                  (set! body (car (cdr (cdr response))))))
-              ((and (equal? "GET" method)
+        (cond ((and (equal? "GET" method)
                     filename
                     (file-exists? filename)
                     (file-regular? filename))
@@ -180,6 +166,20 @@
                   (if (eq? '() (car fileinfo))
                       #t
                       (set! response-headers (append response-headers (car fileinfo))))))
+              ((and (equal? "GET" method) ; FIXME: separate handler
+                    filename
+                    (file-exists? filename)
+                    (equal? (car (reverse components)) ".scm"))
+                (let ((response (eval-module filename request)))
+                  (set! status (car response))
+                  (set! response-headers (append (cadr response) response-headers))
+                  (set! body (car (cdr (cdr response))))))
+              (handler
+                (let ((response (eval-handler handler request)))
+                  (set! status (list-ref response 0))
+                  (set! response-headers (append (list-ref response 1)
+                                                 response-headers))
+                  (set! body (list-ref response 2))))
               ((and (equal? "GET" method) (equal? "/testsuite" path))
                 (set! response-headers (append response-headers
                                               `(("Content-Type" . "text/plain"))))
