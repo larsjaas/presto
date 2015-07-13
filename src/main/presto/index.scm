@@ -120,7 +120,7 @@
     (w "<html>" nl
        "<head>" nl
        "<title>Directory listing: " (get-path dir) "</title>" nl
-       "<link rel=\"stylesheet\" type=\"text/css\" href=\"/css/index.css\">" nl
+       "<link rel=\"stylesheet\" type=\"text/css\" href=\"/css/presto.css\">" nl
        "</head>" nl
        "<body>" nl
        "<tt>" nl
