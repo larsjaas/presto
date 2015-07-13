@@ -111,63 +111,61 @@
          (files (cadr entries))
          (page '())) ; FIXME: stuff in reversed order
 
-    (set! page
-      (list "<html>" nl
-            "<head>" nl
-            "<title>Directory listing: " (get-path dir) "</title>" nl
-            "<link rel=\"stylesheet\" type=\"text/css\" href=\"/css/index.css\">" nl
-            "</head>" nl
-            "<body>" nl
-            "<tt>" nl
-            "<table width=\"100%\">" nl
-            "<thead>" nl))
+    (define (w . args)
+      (set! page
+        (let iter ((a args) (p page))
+          (cond ((null? a) p)
+                (else (iter (cdr a) (cons (car a) p)))))))
 
-    (set! page
-      (append page
-              (list "<tr><td align=\"right\" width=\"10%\"></td><td>"
-                    (get-path-bar (get-path dir))
-                    "</td><td width=\"20%\"></td></tr>")))
+    (w "<html>" nl
+       "<head>" nl
+       "<title>Directory listing: " (get-path dir) "</title>" nl
+       "<link rel=\"stylesheet\" type=\"text/css\" href=\"/css/index.css\">" nl
+       "</head>" nl
+       "<body>" nl
+       "<tt>" nl
+       "<table width=\"100%\">" nl
+       "<thead>" nl)
 
-    (set! page (append page (list
-            "<tr height=\"3px\"></tr>"
-            "<tr>"
-            "<td align=\"right\"><strong>Size</strong></td>"
-            "<td><strong>Name</strong></td>"
-            "<td><strong>Date</strong></td></tr>" nl
-            "</thead>" nl
-            "<tbody>" nl)))
+    (w "<tr><td align=\"right\" width=\"10%\"></td><td>"
+       (get-path-bar (get-path dir))
+       "</td><td width=\"20%\"></td></tr>")
+
+    (w "<tr height=\"3px\"></tr>"
+       "<tr>"
+       "<td align=\"right\"><strong>Size</strong></td>"
+       "<td><strong>Name</strong></td>"
+       "<td><strong>Date</strong></td></tr>" nl
+       "</thead>" nl
+       "<tbody>" nl)
 
     (let iter ((inodes directories))
       (cond ((null? inodes) '())
             (else
-              (set! page (append page
-                                 (list "<tr>"
-                                       "<td align=\"right\">"
-                                       (index-size "&lt;DIR&gt;") "</td>"
-                    "<td><a href=\"" (url-encode-string (get-path (path-join dir (car inodes)))) "\">" (car inodes) "/</a></td>"
-                    "<td>" (index-time (get-file-date (path-join basedir dir (car inodes)))) "</td></tr>" nl )))
+              (w "<tr>"
+                 "<td align=\"right\">"
+                 (index-size "&lt;DIR&gt;") "</td>"
+                 "<td><a href=\"" (url-encode-string (get-path (path-join dir (car inodes)))) "\">" (car inodes) "/</a></td>"
+                 "<td>" (index-time (get-file-date (path-join basedir dir (car inodes)))) "</td></tr>" nl)
               (iter (cdr inodes)))))
 
 
     (let iter ((inodes files))
       (cond ((null? inodes) '())
             (else
-              (set! page (append page
-                                 (list "<tr>"
-                                       "<td align=\"right\">"
-                                       (index-size (get-file-size (path-join basedir dir (car inodes)))) "</td>"
-
-                    "<td><a href=\"" (url-encode-string (car inodes)) "\">" (car inodes) "</a></td>"
-                    "<td>" (index-time (get-file-date (path-join basedir dir (car inodes)))) "</td></tr>" nl)))
+              (w "<tr>"
+                 "<td align=\"right\">"
+                 (index-size (get-file-size (path-join basedir dir (car inodes)))) "</td>"
+                 "<td><a href=\"" (url-encode-string (car inodes)) "\">" (car inodes) "</a></td>"
+                 "<td>" (index-time (get-file-date (path-join basedir dir (car inodes)))) "</td></tr>" nl)
               (iter (cdr inodes)))))
 
-    (set! page (append page (list
-          "</tbody>" nl
-          "</table>" nl
-          "</tt>" nl
-          "</body></html>" nl)))
+    (w "</tbody>" nl
+       "</table>" nl
+       "</tt>" nl
+       "</body></html>" nl)
 
     (list 200
           '(("Content-Type" . ("text/html" "charset=utf-8")))
-          (string->utf8 (apply show #f page)))))
+          (string->utf8 (apply show #f (reverse page))))))
 
