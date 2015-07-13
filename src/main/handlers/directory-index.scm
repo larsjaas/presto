@@ -1,15 +1,21 @@
 ; TODO:
-; - optimize redirect
-; - smart path-joiner function that avoids ///
 ; - generic filters in the api, and also sort function
 ; - human-readable file sizes
 ; - alternate sorting (date-sorting)
-; - move styling to css file
-; - use css/ul/li for table layout
-; - keep header/footer static with scrolling middle
-; - colorize (grey <DIR>, highlight under pointer, ++)
-; - rename index.css to presto.css
-; - stuff page html in reverse and flip on generation
+; - keep header/footer static with scrolling middle?
+
+(import (chibi)
+        (srfi 1)
+        (srfi 95)
+        (chibi filesystem)
+        (chibi io)
+        (chibi string)
+        (chibi show)
+        (chibi time)
+        (presto config)
+        (presto htmlutils)
+        (presto formatting)
+        )
 
 (define (last-char str)
   (string-ref str (- (string-length str) 1)))
@@ -103,12 +109,6 @@
            ("Method" . ,(request 'get-method)))
           (html-error-page 301))))
 
-(define (get-html-index request)
-  (cond ((ends-with-slash? (request 'get-path))
-          (get-html-directory-listing request))
-        (else
-          (get-directory-redirect request))))
-
 (define (get-html-directory-listing request)
   (let* ((basedir (get-htdocs-root))
          (dir (request 'get-path))
@@ -193,4 +193,15 @@
     (list 200
           '(("Content-Type" . ("text/html" "charset=utf-8")))
           (string->utf8 (apply show #f (reverse page))))))
+
+(define (is-handler? request)
+  (let* ((basedir (get-htdocs-root))
+         (path (path-join basedir (request 'get-path))))
+    (file-directory? path)))
+
+(define (get-html request)
+  (cond ((ends-with-slash? (request 'get-path))
+          (get-html-directory-listing request))
+        (else
+          (get-directory-redirect request))))
 

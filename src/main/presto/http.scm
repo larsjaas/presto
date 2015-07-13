@@ -1,4 +1,4 @@
-; stackless actor-based web application server framework
+; FIXME: guard call/cc wrt exceptions as with the testsuite
 
 (define *alog* #f)
 (define *elog* #f)
@@ -33,16 +33,18 @@
             (set! headers `(("Content-Type" . ,type) . ,headers))))
     (cons headers (file->bytevector pathname))))
 
+(define *handler-cache* '())
+
 (define *module-cache* '())
 
-(define (update-module-cache file mtime env)
+(define (update-cache the-cache file mtime env)
   (let ((copy '())
         (found #f))
-    (let iter ((cache *module-cache*))
+    (let iter ((cache the-cache))
       (cond ((null? cache)
               (if (not found)
                   (set! copy (cons (list file mtime env) copy)))
-              (set! *module-cache* (reverse copy)))
+              (reverse copy))
             ((equal? (car (car cache)) file)
               (set! copy (cons (list file mtime env) copy))
               (set! found #t)
@@ -51,12 +53,17 @@
               (set! copy (car cache))
               (iter (cdr cache)))))))
 
+(define (update-module-cache file mtime env)
+  (set! *module-cache* (update-cache *module-cache* file mtime env)))
+
+(define (update-handler-cache file mtime env)
+  (set! *handler-cache* (update-cache *handler-cache* file mtime env)))
+
 (define (make-import-environment)
   (let ((env (make-environment)))
     (%import env (current-environment) '(import) #t)
     env))
 
-; FIXME: guard call/cc wrt exceptions as with the testsuite
 
 (define (eval-module file request)
   (let ((mtime (file-modification-time file))
@@ -73,6 +80,47 @@
             (let ((env (list-ref cached 2)))
               (eval `(application ,request) env))))))
 
+(define (load-handler file)
+  (*elog* 'info "loading handler '" file "'.")
+  (let ((env (make-import-environment))
+        (mtime (file-modification-time file)))
+    (load file env)
+    (update-handler-cache file mtime env)))
+
+(define (load-handlers)
+  (let ((pathlist (conf-get (get-config) 'handler-path)))
+    (cond ((not (null? pathlist))
+            (let ((files (directory-files (car pathlist))))
+              (cond ((not (null? files))
+                      (let ((p (path-join (car pathlist) (car files))))
+                        (if (and (file-regular? p)
+                                 (string=? (car (reverse (path-split p))) ".scm"))
+                            (load-handler p))))))))))
+
+(define (find-handler request)
+  (let iter ((handlers *handler-cache*))
+    (cond ((null? handlers)
+            #f)
+          (else
+            (let* ((handler (car handlers))
+                   (file (list-ref handler 0))
+                   (mtime (list-ref handler 1))
+                   (env (list-ref handler 2)))
+              (if (eval `(is-handler? ,request) env)
+                  file
+                  (iter (cdr handlers))))))))
+
+(define (eval-handler file request)
+  (let ((handler (assoc file *handler-cache*)))
+    (cond ((not handler)
+            (*elog* 'error "could not find handler '" file "'.")
+            (list 404 '() (string->utf8 (html-error-page 404))))
+          (else
+            (let ((file (list-ref handler 0))
+                  (mtime (list-ref handler 1))
+                  (env (list-ref handler 2)))
+              (eval `(get-html ,request) env))))))
+
 (define (error-response-headers status)
   `(("Date" . ,(http/1.1-date-format (current-seconds)))
     ("Content-Type" . "text/html")))
@@ -80,6 +128,7 @@
 (define (http-server port headers basedir)
   (define *sock* (make-listener-socket (get-address-info "loopback" port)))
   (set-socket-option! *sock* level/socket socket-opt/reuseaddr 1)
+  (load-handlers)
   (let mainloop ()
     (let* ((*addr* (make-sockaddr))
            (*conn* (accept *sock* *addr* 32))
@@ -92,20 +141,29 @@
       (define request-headers '())
       (define request '())
       (define response-headers headers)
-      (let* ((request (string-split input))
-             (method (car request))
-             (path (url-decode (car (cdr request))))
-             (proto (car (cdr (cdr request))))
+      (define handler #f)
+      ; FIXME: check input for #<eof>
+      (let* ((requestline (string-split input))
+             (method (car requestline))
+             (path (url-decode (car (cdr requestline))))
+             (proto (car (cdr (cdr requestline))))
              (args (url-arguments path))
              (filename (valid-filename basedir path))
              (components (if filename (path-split filename) '())))
 
         (if (equal? proto "HTTP/1.1")
             (set! request-headers (http/1.1-read-headers in)))
-        (close-input-port in)
+        (close-input-port in) ; FIXME: implement keep-alive
         (set! request (make-request method path proto request-headers))
+        (set! handler (find-handler request))
 
-        (cond ((and (equal? "GET" method)
+        (cond (handler
+                (let ((response (eval-handler handler request)))
+                  (set! status (list-ref response 0))
+                  (set! response-headers (append (list-ref response 1)
+                                                 response-headers))
+                  (set! body (list-ref response 2))))
+              ((and (equal? "GET" method) ; FIXME: separate handler
                     filename
                     (file-exists? filename)
                     (equal? (car (reverse components)) ".scm"))
@@ -122,12 +180,6 @@
                   (if (eq? '() (car fileinfo))
                       #t
                       (set! response-headers (append response-headers (car fileinfo))))))
-              ((and (equal? "GET" method) filename (file-directory? filename))
-                (let ((response (get-html-index request)))
-                  (set! status (car response))
-                  (set! response-headers (append response-headers
-                                                 (cadr response)))
-                  (set! body (car (cdr (cdr response))))))
               ((and (equal? "GET" method) (equal? "/testsuite" path))
                 (set! response-headers (append response-headers
                                               `(("Content-Type" . "text/plain"))))
