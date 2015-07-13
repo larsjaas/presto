@@ -11,12 +11,33 @@
 ; - rename index.css to presto.css
 ; - stuff page html in reverse and flip on generation
 
+(define (last-char str)
+  (string-ref str (- (string-length str) 1)))
+
+(define (ends-with-slash? pathstr)
+  (char=? (last-char pathstr) #\/))
+
+(define (begins-with-slash? pathstr)
+  (char=? (string-ref pathstr 0) #\/))
+
 (define (nodotfiles file)
   (not (eq? (string-ref file 0) #\.)))
 
 (define (path-join basedir . extra)
-  ; FIXME: check if / is required, accept varargs
-  (join "/" (append (list basedir) extra)))
+  (let iter ((stack (list basedir))
+             (e extra))
+    (cond ((null? e)
+            (join "" (reverse stack)))
+          ((and (ends-with-slash? (car stack))
+                (begins-with-slash? (car e)))
+            (iter (cons (substring (car e) 1) stack) (cdr e)))
+          ((ends-with-slash? (car stack))
+            (iter (cons (car e) stack) (cdr e)))
+          (else
+            (iter (cons (car e) (cons "/" stack)) (cdr e))))))
+
+;  ; FIXME: check if / is required, accept varargs
+;  (join "/" (append (list basedir) extra)))
 
 (define (sort-dir path)
   (let ((files '())
@@ -43,11 +64,7 @@
           (pad-02 (time-second time)))))
 
 (define (index-size size)
-  (number->string size))
-
-(define (get-file-size path)
-  (let ((fsize (file-size path)))
-    fsize))
+  (number->string size)) ; human-readable NN.NK, or NN.NNN.NNN formatting
 
 (define (get-path path)
   (apply show #f
@@ -86,9 +103,6 @@
            ("Method" . ,(request 'get-method)))
           (html-error-page 301))))
 
-(define (ends-with-slash? pathstr)
-  (char=? (string-ref pathstr (- (string-length pathstr) 1)) #\/))
-
 (define (get-html-index request)
   (cond ((ends-with-slash? (request 'get-path))
           (get-html-directory-listing request))
@@ -111,8 +125,8 @@
 
     (w "<html>" nl
        "<head>" nl
-       "<title>Directory listing: " (get-path dir) "</title>" nl
        "<link rel=\"stylesheet\" type=\"text/css\" href=\"/css/presto.css\">" nl
+       "<title>Directory listing: " (get-path dir) "</title>" nl
        "</head>" nl)
 
     (w "<body>" nl
@@ -144,13 +158,13 @@
               (w "<ul class=\"direntry\">" nl
                  "<li class=\"size dir\">&lt;DIR&gt;" nl
                  "<li class=\"name\">"
-                 "<a href=\"" (url-encode-string (get-path (path-join dir (car inodes))))
+                 "<a href=\"" (url-encode-string (path-join dir (car inodes)))
                  "\">" (car inodes) "/</a>" nl
                  "<li class=\"mdate\">"
-                 (index-time (file-modification-time (path-join basedir dir (car inodes)))) nl
-                 "<li class=\"adate\">"
-                 (index-time (file-access-time (path-join basedir dir (car inodes)))) nl
-                 "<li class=\"cdate\">"
+                 (index-time (file-modification-time (path-join basedir dir (car inodes)))) nl)
+              (w "<li class=\"adate\">"
+                 (index-time (file-access-time (path-join basedir dir (car inodes)))) nl)
+              (w "<li class=\"cdate\">"
                  (index-time (file-change-time (path-join basedir dir (car inodes)))) nl
                  "</ul>" nl)
               (iter (cdr inodes)))))
@@ -159,7 +173,7 @@
       (cond ((not (null? inodes))
               (w "<ul class=\"direntry\">" nl
                  "<li class=\"size file\">"
-                 (index-size (get-file-size (path-join basedir dir (car inodes)))) nl
+                 (index-size (file-size (path-join basedir dir (car inodes)))) nl
                  "<li class=\"name\">"
                  "<a href=\"" (url-encode-string (car inodes)) "\">" (car inodes) "</a>" nl
                  "<li class=\"mdate\">"
@@ -171,10 +185,10 @@
                  "</ul>" nl)
               (iter (cdr inodes)))))
 
-
     (w "</ul>" nl)
     (w "</tt>" nl
-       "</body></html>" nl)
+       "</body>" nl
+       "</html>" nl)
 
     (list 200
           '(("Content-Type" . ("text/html" "charset=utf-8")))
