@@ -2,6 +2,7 @@
   (import (scheme small)
           (scheme char)
           (chibi string)
+          (presto alist)
           (presto logging))
   (export alist? repeat-count json-initialize sexp->json json->sexp)
   (include "json.scm"))

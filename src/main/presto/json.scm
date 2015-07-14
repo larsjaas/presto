@@ -8,13 +8,6 @@
 (define (json-initialize)
   (set! *elog* (get-error-log-logger)))
 
-(define (alist? obj)
-  (let iter ((l obj))
-    (cond ((null? l) #t)
-          ((or (not (pair? l)) (not (pair? (car l)))) #f)
-          (else
-            (iter (cdr l))))))
-
 (define (alist->json obj)
   (cond ((alist? obj)
           (apply string-append
