@@ -2,4 +2,3 @@
   (import (chibi))
   (export make-request)
   (include "request.scm"))
-
