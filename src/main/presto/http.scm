@@ -7,20 +7,25 @@
   (set! *alog* (get-access-log-logger))
   (set! *elog* (get-error-log-logger)))
 
-(define (valid-filename basedir path)
-  (let ((filename (string-append basedir path))
-        (index #f))
-    (if (not (and (file-exists? filename) (file-regular? filename)))
-      (let iter ((indices (get-index-order)))
-        (cond ((null? indices) index)
-              ((not (and index (file-exists? index)))
-                (set! index (string-append basedir path "/" (car indices)))
-                (iter (cdr indices)))))
-      (set! index filename))
-    (if (and (file-exists? index)
-             (file-is-readable? index))
-        index
-        #f)))
+(define (rewrite-path request)
+  (let outer ((indices (conf-get (get-config) 'index-order)))
+    (let inner ((roots (conf-get (get-config) 'htdocs-root)))
+      (cond ((null? roots)
+              (if (not (null? indices))
+                  (outer (cdr indices))))
+            ((null? indices)
+              (request 'get-path))
+            (else
+              (request 'set-basedir! (car roots))
+              (let ((path (path-join (car roots) (request 'get-path) (car indices))))
+                (cond ((and (file-exists? path) (file-regular? path))
+                        (request 'set-basedir! (car roots))
+                        (request 'set-path! (path-join (request 'get-path) (car indices))))
+                      ((and (file-exists? path) (file-directory? path))
+                        (request 'set-basedir! (car roots))
+                        (request 'set-path! (path-join (request 'get-path) (car indices))))
+                      (else
+                        (inner (cdr roots))))))))))
 
 (define (file-read pathname)
   (let* ((headers '())
@@ -35,56 +40,14 @@
 
 (define *handler-cache* '())
 
-(define *module-cache* '())
-
-(define (update-cache the-cache file mtime env)
-  (let ((copy '())
-        (found #f))
-    (let iter ((cache the-cache))
-      (cond ((null? cache)
-              (if (not found)
-                  (set! copy (cons (list file mtime env) copy)))
-              (reverse copy))
-            ((equal? (car (car cache)) file)
-              (set! found #t)
-              (set! copy (cons (list file mtime env) copy))
-              (iter (cdr cache)))
-            (else
-              (set! copy (cons (car cache) '()))
-              (iter (cdr cache)))))))
-
-(define (update-module-cache file mtime env)
-  (set! *module-cache* (update-cache *module-cache* file mtime env)))
-
 (define (update-handler-cache file mtime env)
-  (set! *handler-cache* (update-cache *handler-cache* file mtime env)))
+  (set! *handler-cache* (update-alist *handler-cache* file mtime env)))
 
-(define (make-import-environment)
-  (let ((env (make-environment)))
-    (%import env (current-environment) '(import) #t)
-    env))
-
-
-(define (eval-module file request)
-  (let ((mtime (file-modification-time file))
-        (cached (assoc file *module-cache*)))
-    (cond ((or (not cached)
-               (and cached (> mtime (list-ref cached 1))))
-            ; update the module cache
-            (let ((env (make-import-environment)))
-              (load file env)
-              (update-module-cache file mtime env)
-              (eval `(application ,request) env)))
-          (else
-            ; reuse the module from the cache
-            (let ((env (list-ref cached 2)))
-              (eval `(application ,request) env))))))
 
 (define (load-handler file)
   (*elog* 'info "loading handler '" file "'.")
-  (let ((env (make-import-environment))
-        (mtime (file-modification-time file)))
-    (load file env)
+  (let ((mtime (file-modification-time file))
+        (env (load-file file)))
     (update-handler-cache file mtime env)))
 
 (define (load-handlers)
@@ -107,9 +70,10 @@
                    (file (list-ref handler 0))
                    (mtime (list-ref handler 1))
                    (env (list-ref handler 2)))
-              (if (eval `(is-handler? ,request) env)
-                  file
-                  (iter (cdr handlers))))))))
+              (cond ((eval `(is-handler? ,request) env)
+                      file)
+                    (else
+                      (iter (cdr handlers)))))))))
 
 (define (eval-handler file request)
   (let ((handler (assoc file *handler-cache*)))
@@ -126,6 +90,13 @@
   `(("Date" . ,(http/1.1-date-format (current-seconds)))
     ("Content-Type" . "text/html")))
 
+; if no rewrite of /, use directory index handler
+; if rewrite of / to index.scm, use handler for scheme, not directory index
+; if rewrite of / to index.html, pipe file directly, don't use handler for directory index
+
+; rewrite handlers:
+; - rewrite path to hit file
+; - find handler for file
 (define (http-server port headers basedir)
   (define *sock* (make-listener-socket (get-address-info "loopback" port)))
   (set-socket-option! *sock* level/socket socket-opt/reuseaddr 1)
@@ -149,38 +120,32 @@
              (path (url-decode (car (cdr requestline))))
              (proto (car (cdr (cdr requestline))))
              (args (url-arguments path))
-             (filename (valid-filename basedir path))
-             (components (if filename (path-split filename) '())))
+             (components '()))
 
         (if (equal? proto "HTTP/1.1")
             (set! request-headers (http/1.1-read-headers in)))
         (close-input-port in) ; FIXME: implement keep-alive
         (set! request (make-request method path proto request-headers))
+        (rewrite-path request)
+        (set! components (path-split (request 'get-path)))
+
         (set! handler (find-handler request))
 
-        (cond ((and (equal? "GET" method)
-                    filename
-                    (file-exists? filename)
-                    (file-regular? filename))
-                (let ((fileinfo (file-read filename)))
-                  (set! body (cdr fileinfo))
-                  (if (eq? '() (car fileinfo))
-                      #t
-                      (set! response-headers (append response-headers (car fileinfo))))))
-              ((and (equal? "GET" method) ; FIXME: separate handler
-                    filename
-                    (file-exists? filename)
-                    (equal? (car (reverse components)) ".scm"))
-                (let ((response (eval-module filename request)))
-                  (set! status (car response))
-                  (set! response-headers (append (cadr response) response-headers))
-                  (set! body (car (cdr (cdr response))))))
-              (handler
+        (cond (handler
                 (let ((response (eval-handler handler request)))
                   (set! status (list-ref response 0))
                   (set! response-headers (append (list-ref response 1)
                                                  response-headers))
                   (set! body (list-ref response 2))))
+
+              ((and (equal? "GET" method)
+                    (file-exists? (path-join (request 'get-basedir) (request 'get-path)))
+                    (file-regular? (path-join (request 'get-basedir) (request 'get-path)))
+                (let ((fileinfo (file-read (path-join (request 'get-basedir) (request 'get-path)))))
+                  (set! body (cdr fileinfo))
+                  (if (not (eq? '() (car fileinfo)))
+                      (set! response-headers (append response-headers (car fileinfo)))))))
+
               (else
                 (set! status 404)
                 (set! status-ok #f)

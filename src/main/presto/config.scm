@@ -15,7 +15,3 @@
 
 (define (get-index-order)
   *index-order*)
-
-(define (get-htdocs-root)
-  (conf-get *config* 'htdocs-root))
-

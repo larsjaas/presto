@@ -87,7 +87,6 @@
 
 ; add basedir which you don't link below
 (define (get-path-bar path)
-  ;(display path) (newline)
   (apply show #f
     (let iter ((elts (string-split path #\/))
                (parent "")
@@ -110,7 +109,7 @@
           (html-error-page 301))))
 
 (define (get-html-directory-listing request)
-  (let* ((basedir (get-htdocs-root))
+  (let* ((basedir (request 'get-basedir))
          (dir (request 'get-path))
          (entries (sort-dir (path-join basedir dir)))
          (directories (car entries))
@@ -195,7 +194,7 @@
           (string->utf8 (apply show #f (reverse page))))))
 
 (define (is-handler? request)
-  (let* ((basedir (get-htdocs-root))
+  (let* ((basedir (request 'get-basedir))
          (path (path-join basedir (request 'get-path))))
     (file-directory? path)))
 
