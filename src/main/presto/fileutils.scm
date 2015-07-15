@@ -18,9 +18,6 @@
 (define (begins-with-slash? pathstr)
   (char=? (first-char pathstr) #\/))
 
-(define (nodotfiles file)
-  (not (eq? (first-char file) #\.)))
-
 (define (path-join basedir . extra)
   (let iter ((stack (list basedir))
              (e extra))

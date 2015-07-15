@@ -12,9 +12,9 @@
         (chibi string)
         (chibi show)
         (chibi time)
-        (presto config)
         (presto htmlutils)
         (presto formatting)
+        (presto fileutils)
         )
 
 (define (last-char str)
@@ -23,27 +23,8 @@
 (define (ends-with-slash? pathstr)
   (char=? (last-char pathstr) #\/))
 
-(define (begins-with-slash? pathstr)
-  (char=? (string-ref pathstr 0) #\/))
-
 (define (nodotfiles file)
   (not (eq? (string-ref file 0) #\.)))
-
-(define (path-join basedir . extra)
-  (let iter ((stack (list basedir))
-             (e extra))
-    (cond ((null? e)
-            (join "" (reverse stack)))
-          ((and (ends-with-slash? (car stack))
-                (begins-with-slash? (car e)))
-            (iter (cons (substring (car e) 1) stack) (cdr e)))
-          ((ends-with-slash? (car stack))
-            (iter (cons (car e) stack) (cdr e)))
-          (else
-            (iter (cons (car e) (cons "/" stack)) (cdr e))))))
-
-;  ; FIXME: check if / is required, accept varargs
-;  (join "/" (append (list basedir) extra)))
 
 (define (sort-dir path)
   (let ((files '())
@@ -98,15 +79,6 @@
               (cons
                 (string-append "<a class=\"button\" href=\"" (get-path (string-append parent (car elts) "/")) "\">" (car elts) "/</a>")
                 (iter (cdr elts) (string-append parent (car elts) "/") #f)))))))
-
-(define (get-directory-redirect request)
-  (let* ((dir (request 'get-path))
-         (host (request 'get-header 'host))
-         (dirlocation (if (and host dir) (string-append "//" host dir "/") "")))
-    (list 301
-          `(("Location" . ,dirlocation)
-           ("Method" . ,(request 'get-method)))
-          (html-error-page 301))))
 
 (define (get-html-directory-listing request)
   (let* ((basedir (request 'get-basedir))
@@ -196,11 +168,8 @@
 (define (is-handler? request)
   (let* ((basedir (request 'get-basedir))
          (path (path-join basedir (request 'get-path))))
-    (file-directory? path)))
+    (and (file-directory? path)
+         (ends-with-slash? path))))
 
 (define (get-html request)
-  (cond ((ends-with-slash? (request 'get-path))
-          (get-html-directory-listing request))
-        (else
-          (get-directory-redirect request))))
-
+  (get-html-directory-listing request))
