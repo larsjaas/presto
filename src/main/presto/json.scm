@@ -273,3 +273,54 @@
     (let ((data (read-value-from 0)))
       (car data))))
 
+(define (json-prettify json)
+  (let ((indent 0)
+        (instring #f)
+        (builder '()))
+    (string-for-each
+      (lambda (c)
+        (cond ((and instring
+                    (char=? c #\")
+                    (= (modulo (repeat-count builder #\\) 2) 0))
+                (set! builder (cons c builder))
+                (set! instring #f))
+              (instring
+                (set! builder (cons c builder)))
+              ((char=? c #\")
+                (set! builder (cons c builder))
+                (set! instring #t))
+              ((char=? c #\:)
+                (set! builder (cons #\space (cons c builder))))
+              ((char=? c #\,)
+                (set! builder (cons #\newline (cons c builder)))
+                (set! builder
+                  (let iter ((i indent) (b builder))
+                    (cond ((> i 0)
+                            (cons #\space (iter (- i 1) b)))
+                          (else
+                            b)))))
+              ((or (char=? c #\[) (char=? c #\{))
+                (set! indent (+ indent 2))
+                (set! builder (cons #\newline (cons c builder)))
+                (set! builder
+                  (let iter ((i indent) (b builder))
+                    (cond ((> i 0)
+                            (cons #\space (iter (- i 1) b)))
+                          (else
+                            b)))))
+              ((or (char=? c #\]) (char=? c #\}))
+                (set! indent (- indent 2))
+                (set! builder (cons #\newline builder))
+                (set! builder
+                  (let iter ((i indent) (b builder))
+                    (cond ((> i 0)
+                            (cons #\space (iter (- i 1) b)))
+                          (else
+                            b))))
+                (set! builder (cons c builder)))
+              (else
+                (set! builder (cons c builder)))))
+      json)
+    (list->string (reverse (cons #\newline builder)))))
+
+;  json)

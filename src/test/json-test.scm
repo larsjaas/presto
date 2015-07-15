@@ -20,6 +20,11 @@
       (sexp->json '(("key1" . "value1") ("key2" . "value2"))))
 (test "[true,false]" (sexp->json '(#t #f)))
 
+(test "{\"name\":\"Ole Kristian Selnæs\",\"short-name\":\"Selnæs\",\"uuid\":\"8303bfa6-a568-40af-b634-934e9cba23cf\",\"image-20-url\":\"http://i.imgur.com/zoWagga.png\"}" (sexp->json '(("name" . "Ole Kristian Selnæs")
+ ("short-name" . "Selnæs")
+ ("uuid" . "8303bfa6-a568-40af-b634-934e9cba23cf")
+ ("image-20-url" . "http://i.imgur.com/zoWagga.png"))))
+
 ; repeat-count
 (test 0 (repeat-count '(#\a #\b #\c) #\f))
 (test 0 (repeat-count '() #\f))
@@ -49,6 +54,7 @@
 (test '(("var" . 5)) (json->sexp "{\"var\":5}"))
 (test '(("var" . 5)("val" . "hei")) (json->sexp "{\"var\":5, \"val\":\"hei\"}"))
 (test '(("var" . (1 2 3))) (json->sexp "{\"var\": [1,2, 3\n]}"))
+
 
 (define (main args)
   (newline))
