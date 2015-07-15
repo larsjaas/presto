@@ -18,6 +18,10 @@
 (define (begins-with-slash? pathstr)
   (char=? (first-char pathstr) #\/))
 
+(define (basename path)
+  (let ((filename (car (reverse (string-split path #\/)))))
+    (car (string-split filename #\.))))
+
 (define (path-join basedir . extra)
   (let iter ((stack (list basedir))
              (e extra))
