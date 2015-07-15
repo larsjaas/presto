@@ -24,6 +24,9 @@
             (let ((env (list-ref cached 2)))
               (eval `(application ,request) env))))))
 
+(define (initialize)
+  #t)
+
 (define (is-handler? request)
   (let ((basedir (request 'get-basedir))
         (components (path-split (request 'get-path))))
@@ -35,10 +38,7 @@
          (path (path-join basedir (request 'get-path)))
          (mtime (file-modification-time path))
          (components (path-split path)))
-
     (if (and (file-exists? path)
              (string=? (car (reverse components)) ".scm"))
-
         (let ((response (eval-module path request)))
           response))))
-

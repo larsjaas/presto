@@ -45,10 +45,13 @@
 
 
 (define (load-handler file)
-  (*elog* 'info "loading handler '" file "'.")
   (let ((mtime (file-modification-time file))
-        (env (load-file file)))
-    (update-handler-cache file mtime env)))
+        (env (load-file file))
+        (name (basename file)))
+    (*elog* 'info "loading handler '" name "'.")
+    (if (eval '(initialize) env) ; delay initialization to get orderly logging?
+        (update-handler-cache file mtime env)
+        (*elog* 'warning "handler '" name "' failed to initialize. skipped."))))
 
 (define (load-handlers)
   (let pathiter ((pathlist (conf-get (get-config) 'handler-path)))

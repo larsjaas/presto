@@ -19,6 +19,9 @@
            ("Method" . ,(request 'get-method)))
           (html-error-page 301))))
 
+(define (initialize)
+  #t)
+
 (define (is-handler? request)
   (let* ((basedir (request 'get-basedir))
          (path (path-join basedir (request 'get-path))))

@@ -60,6 +60,9 @@
          (directory-files "src/test/"))
     (current-output-port old-port)))
 
+(define (initialize)
+  #t)
+
 (define (is-handler? request)
   (and (string=? "GET" (request 'get-method))
        (string=? "/testsuite" (request 'get-path))))

@@ -165,6 +165,9 @@
           '(("Content-Type" . ("text/html" "charset=utf-8")))
           (string->utf8 (apply show #f (reverse page))))))
 
+(define (initialize)
+  #t)
+
 (define (is-handler? request)
   (let* ((basedir (request 'get-basedir))
          (path (path-join basedir (request 'get-path))))
