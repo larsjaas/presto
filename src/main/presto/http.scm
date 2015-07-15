@@ -165,7 +165,7 @@
 
       (if *alog* (*alog* 'info status " " input))
 
-      (show out (http/1.1-status-line status) nl)
+      (show out (http/1.1-status-line status) #\return #\newline)
       (apply show out (format-headers response-headers))
       (write-bytevector body out) ; maybe dump with-input-from-file instead
       (close-output-port out)

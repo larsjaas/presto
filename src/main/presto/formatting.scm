@@ -16,11 +16,11 @@
 
 (define (format-headers headers)
   (let iter ((headrs headers))
-    (cond ((eq? headrs '()) `(,nl))
+    (cond ((eq? headrs '()) `(#\return #\newline))
           ((pair? (cdr (car headrs)))
-            (append `(,(car (car headrs)) ": " ,(join ";" (cdr (car headrs))) ,nl)
+            (append `(,(car (car headrs)) ": " ,(join ";" (cdr (car headrs))) #\return #\newline)
                     (iter (cdr headrs))))
-          (else (append `(,(car (car headrs)) ": " ,(cdr (car headrs)) ,nl)
+          (else (append `(,(car (car headrs)) ": " ,(cdr (car headrs)) #\return #\newline)
                         (iter (cdr headrs)))))))
 
 (define (pad-02 num)
@@ -51,4 +51,3 @@
               ))
       url)
     (list->string (reverse lst))))
-
