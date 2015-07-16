@@ -3,7 +3,8 @@
         (path path)
         (proto proto)
         (headers headerset)
-        (basedir #f))
+        (basedir #f)
+        (body #f))
     (define (get-method) method)
     (define (get-proto) proto)
     (define (set-path! arg) (set! path arg))
@@ -14,6 +15,8 @@
     (define (get-header header)
       (let ((data (assq header headers)))
         (if (pair? data) (cdr data) #f)))
+    (define (set-body! arg) (set! body arg))
+    (define (get-body) body)
 
     (lambda (dispatch . args)
       (cond ((eq? dispatch 'get-method)
@@ -32,6 +35,10 @@
               (apply get-headers args))
             ((eq? dispatch 'get-header)
               (apply get-header args))
+            ((eq? dispatch 'set-body!)
+              (apply set-body! args))
+            ((eq? dispatch 'get-body)
+              (apply get-body args))
             (else
               (display "make-request dispatch fallthrough\n"
                        (current-error-port))

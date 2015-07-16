@@ -115,6 +115,7 @@
       (define status-ok #t)
       (define request-headers '())
       (define request '())
+      (define request-body #f)
       (define response-headers headers)
       (define handler #f)
       ; FIXME: check input for #<eof>
@@ -127,8 +128,22 @@
 
         (if (equal? proto "HTTP/1.1")
             (set! request-headers (http/1.1-read-headers in)))
+
+        (let ((contlen (assoc 'content-length request-headers)))
+          (cond ((and contlen (< 0 (string->number (cdr contlen))))
+                  (set! request-body
+                    (let iter ((bytes (string->number (cdr contlen)))
+                               (data '()))
+                      (cond ((> bytes 0)
+                              (iter (- bytes 1) (cons (read-char in) data)))
+                            (else
+                              (list->string (reverse data))))))
+                  )))
+
         (close-input-port in) ; FIXME: implement keep-alive
         (set! request (make-request method path proto request-headers))
+        (if request-body
+            (request 'set-body! request-body))
         (rewrite-path request)
         (set! components (path-split (request 'get-path)))
 
