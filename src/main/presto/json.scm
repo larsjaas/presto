@@ -62,6 +62,8 @@
           "true")
         ((eq? sexp #f)
           "false")
+        ((and (list? sexp) (alist? (car sexp)))
+          (list->json sexp))
         ((alist? sexp) ; triggers on null as well
           (alist->json sexp))
         ((list? sexp)
