@@ -130,8 +130,12 @@
              (args (url-arguments path))
              (components '()))
 
-        (if (equal? proto "HTTP/1.1")
-            (set! request-headers (http/1.1-read-headers in)))
+        (cond ((equal? proto "HTTP/1.1")
+                (set! request-headers (http/1.1-read-headers in))
+                (if (assoc 'host request-headers)
+                    (let ((host (cdr (assoc 'host request-headers))))
+                      (set! host (car (string-split host #\:)))
+                      (set! response-headers (cons (cons "Host" host) response-headers))))))
 
         (let ((contlen (assoc 'content-length request-headers)))
           (cond ((and contlen (< 0 (string->number (cdr contlen))))
@@ -180,7 +184,8 @@
 
       (if body
           (set! response-headers (append response-headers
-                                        `(("Content-Length" . ,(bytevector-length body))))))
+                                        `(("Accept-Ranges" . "none")
+                                          ("Content-Length" . ,(bytevector-length body))))))
 
       (if *alog* (*alog* 'info status " " input))
 
