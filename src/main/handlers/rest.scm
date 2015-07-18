@@ -1,0 +1,95 @@
+(import (chibi)
+        (chibi config)
+        (chibi io)
+        (chibi filesystem)
+        (presto alist)
+        (presto config)
+        (presto eval)
+        (presto logging)
+        (presto parse)
+        (presto json)
+        (presto fileutils)
+        (presto htmlutils))
+
+(define *elog* '())
+
+(define *rest-handlers* '())
+
+(define (update-rest-handler-cache file mtime env hook)
+  (set! *rest-handlers* (update-alist *rest-handlers* file mtime env hook)))
+
+(define (load-resthandler file)
+  ; FIXME: register rest handler
+  (let ((mtime (file-modification-time file))
+        (env (load-file file))
+        (name (basename file)))
+    (*elog* 'info "loading rest-handler '" name "'.")
+    (cond ((eval '(initialize) env)
+            (let ((hook (eval '(get-rest-path) env)))
+              (update-rest-handler-cache file mtime env hook)))
+          (else
+            (*elog* 'warning "rest-handler '" name "' failed to initialize. skipped.")))))
+
+(define (string-starts-with prefix str)
+  (let ((plen (string-length prefix))
+        (slen (string-length str)))
+    (cond ((>= slen plen)
+            (string=? prefix (substring str 0 plen)))
+          (else
+            #f))))
+
+(define (find-handler path)
+  (let iter ((handlers *rest-handlers*))
+    (cond ((null? handlers)
+            #f)
+          ((string-starts-with (list-ref (car handlers) 3) path)
+            (car handlers))
+          (else
+            (iter (cdr handlers))))))
+
+(define (initialize)
+  (set! *elog* (get-error-log-logger))
+  (json-initialize)
+  (let pathiter ((pathlist (conf-get (get-config) 'resthandler-path)))
+    (cond ((not (null? pathlist))
+            (let fileiter ((files (directory-files (car pathlist))))
+              (cond ((not (null? files))
+                      (let ((p (path-join (car pathlist) (car files))))
+                        (if (and (file-regular? p)
+                                 (string=? (car (reverse (path-split p))) ".scm"))
+                            (load-resthandler p)))
+                      (fileiter (cdr files)))))
+            (pathiter (cdr pathlist)))))
+  #t)
+
+(define (is-handler? request)
+  (if (find-handler (request 'get-path)) #t #f))
+
+(define (get-html request)
+  (let ((handler (find-handler (request 'get-path)))
+        (env '())
+        (data '()))
+    (cond (handler
+            (set! env (list-ref handler 2))
+            (set! data (eval `(get-request ,request) env))
+            (list 200
+                  '(("Content-Type" . ("application/json" "charset=utf-8")))
+                  (string->utf8 (json-prettify (sexp->json data)))))
+          (else
+            (list 400 '() #f (string->utf8 "")))))
+
+;  (let ((handler (find-handler (request 'get-path)))
+;        (method (request 'get-method)))
+;    (cond ((string=? method "GET")
+;            #f)
+;          ((string=? method "PUT")
+;            #f)
+;          ((string=? method "POST")
+;            #f)
+;          ((string=? method "DELETE")
+;            #f)
+;          ((string=? method "OPTIONS")
+;            #f)
+;          (else
+;            (list 400 '() (make-error-html 400)))))
+  )
