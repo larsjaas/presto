@@ -1,4 +1,5 @@
-; FIXME: guard call/cc wrt exceptions as with the testsuite
+; TODO:
+; - guard call/cc request handling wrt exceptions as with the testsuite
 
 (define *alog* #f)
 (define *elog* #f)
@@ -7,6 +8,8 @@
   (set! *alog* (get-access-log-logger))
   (set! *elog* (get-error-log-logger)))
 
+; FIXME: use some kind of combinatorial map()-function to iterate over
+; outer+inner with just one indentation level
 (define (rewrite-path request)
   (let outer ((indices (conf-get (get-config) 'index-order)))
     (let inner ((roots (conf-get (get-config) 'htdocs-root)))
@@ -93,13 +96,6 @@
   `(("Date" . ,(http/1.1-date-format (current-seconds)))
     ("Content-Type" . "text/html")))
 
-; if no rewrite of /, use directory index handler
-; if rewrite of / to index.scm, use handler for scheme, not directory index
-; if rewrite of / to index.html, pipe file directly, don't use handler for directory index
-
-; rewrite handlers:
-; - rewrite path to hit file
-; - find handler for file
 (define (http-server port headers basedir)
   (define *sock* (make-listener-socket (get-address-info "loopback" port)))
   (set-socket-option! *sock* level/socket socket-opt/reuseaddr 1)
@@ -118,7 +114,15 @@
       (define request-body #f)
       (define response-headers headers)
       (define handler #f)
-      ; FIXME: check input for #<eof>
+
+      (if (or (eof-object? input)
+              (< (length (string-split input)) 3))
+          (begin
+            (close-input-port in)
+            (close-output-port out)
+            (*alog* 'debug
+            (mainloop))))
+
       (let* ((requestline (string-split input))
              (method (car requestline))
              (path (url-decode (car (cdr requestline))))
