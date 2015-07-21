@@ -4,6 +4,7 @@
         (proto proto)
         (headers headerset)
         (basedir #f)
+        (arguments '())
         (body #f))
     (define (get-method) method)
     (define (get-proto) proto)
@@ -17,6 +18,11 @@
         (if (pair? data) (cdr data) #f)))
     (define (set-body! arg) (set! body arg))
     (define (get-body) body)
+
+    (let ((elements (string-split path #\? 2)))
+      (if (>= 2 (length elements))
+        (set! path (car elements))
+        (set! arguments (car (cdr elements)))))
 
     (lambda (dispatch . args)
       (cond ((eq? dispatch 'get-method)
