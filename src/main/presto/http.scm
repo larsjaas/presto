@@ -44,7 +44,7 @@
 (define *handler-cache* '())
 
 (define (update-handler-cache file mtime env)
-  (set! *handler-cache* (update-alist *handler-cache* file mtime env)))
+  (set! *handler-cache* (update-alist *handler-cache* file (list mtime env))))
 
 
 (define (load-handler file)

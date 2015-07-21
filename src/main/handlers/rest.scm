@@ -16,7 +16,7 @@
 (define *rest-handlers* '())
 
 (define (update-rest-handler-cache file mtime env hook)
-  (set! *rest-handlers* (update-alist *rest-handlers* file mtime env hook)))
+  (set! *rest-handlers* (update-alist *rest-handlers* file (list mtime env hook))))
 
 (define (load-resthandler file)
   ; FIXME: register rest handler
@@ -70,8 +70,11 @@
         (env '())
         (data '()))
     (cond (handler
+            (cond ((request 'get-body)
+                    (display (request 'get-body))
+                    (newline)))
             (set! env (list-ref handler 2))
-            (set! data (eval `(get-request ,request) env))
+            (set! data (eval `(rest-request ,request) env))
             (list 200
                   '(("Content-Type" . ("application/json" "charset=utf-8")))
                   (string->utf8 (json-prettify (sexp->json data)))))
