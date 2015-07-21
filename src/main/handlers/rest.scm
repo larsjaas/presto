@@ -70,9 +70,9 @@
         (env '())
         (data '()))
     (cond (handler
-            (cond ((request 'get-body)
-                    (display (request 'get-body))
-                    (newline)))
+            ;(cond ((request 'get-body)
+            ;        (display (request 'get-body))
+            ;        (newline)))
             (set! env (list-ref handler 2))
             (set! data (eval `(rest-request ,request) env))
             (list 200
