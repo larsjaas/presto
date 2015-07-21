@@ -56,15 +56,15 @@
         (else (*elog* 'error "integer->json called with non-integer!"))))
 
 (define (sexp->json sexp)
-  (cond ;((null? sexp)
-        ;  "{}")
+  (cond ((null? sexp) ; list/alist tests will trigger further down and break
+          "{}")
         ((eq? sexp #t)
           "true")
         ((eq? sexp #f)
           "false")
         ((and (list? sexp) (alist? (car sexp)))
           (list->json sexp))
-        ((alist? sexp) ; triggers on null as well
+        ((alist? sexp)
           (alist->json sexp))
         ((list? sexp)
           (list->json sexp))
@@ -73,7 +73,7 @@
         ((integer? sexp)
           (integer->json sexp))
         (else
-          (*elog* 'error "sexp->json called with unsupported expression type")
+          (*elog* 'error "sexp->json called with unsupported expression type '" sexp "'.")
           "???")))
 
 (define (begins-with pat vec pos)
