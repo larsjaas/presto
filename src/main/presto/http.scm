@@ -120,8 +120,8 @@
           (begin
             (close-input-port in)
             (close-output-port out)
-            (*alog* 'debug
-            (mainloop))))
+            (*alog* 'debug "closing invalid request connection.")
+            (mainloop)))
 
       (let* ((requestline (string-split input))
              (method (car requestline))
