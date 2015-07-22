@@ -1,4 +1,7 @@
 (define-library (presto uuid)
-  (import (scheme small) (scheme char) (chibi process))
+  (import (scheme small)
+          (scheme char)
+          (chibi process)
+          (chibi string))
   (export gen-uuid)
   (include "uuid.scm"))
