@@ -140,12 +140,8 @@
         (let ((contlen (assoc 'content-length request-headers)))
           (cond ((and contlen (< 0 (string->number (cdr contlen))))
                   (set! request-body
-                    (let iter ((bytes (string->number (cdr contlen)))
-                               (data '()))
-                      (cond ((> bytes 0)
-                              (iter (- bytes 1) (cons (read-char in) data)))
-                            (else
-                              (list->string (reverse data))))))
+                    (let ((bytes (string->number (cdr contlen))))
+                      (utf8->string (read-bytevector bytes in))))
                   )))
 
         (close-input-port in) ; FIXME: implement keep-alive
