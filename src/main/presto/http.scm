@@ -97,7 +97,7 @@
     ("Content-Type" . "text/html")))
 
 (define (http-server port headers basedir)
-  (define *sock* (make-listener-socket (get-address-info "loopback" port)))
+  (define *sock* (make-listener-socket (get-address-info "0.0.0.0" port)))
   (set-socket-option! *sock* level/socket socket-opt/reuseaddr 1)
   (load-handlers)
   (let mainloop ()
