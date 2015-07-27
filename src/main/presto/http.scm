@@ -114,6 +114,9 @@
       (define request-body #f)
       (define response-headers headers)
       (define handler #f)
+      (define time-before (car (get-time-of-day)))
+      (define time-between #f)
+      (define time-after #f)
 
       (if (or (eof-object? input)
               (< (length (string-split input)) 3))
@@ -182,13 +185,21 @@
           (set! response-headers (append response-headers
                                         `(("Accept-Ranges" . "none")
                                           ("Content-Length" . ,(bytevector-length body))))))
-
-      (if *alog* (*alog* 'info status " " input))
+      (set! time-between (car (get-time-of-day)))
 
       (show out (http/1.1-status-line status) #\return #\newline)
       (apply show out (format-headers response-headers))
       (write-bytevector body out) ; maybe dump with-input-from-file instead
       (close-output-port out)
       (close-file-descriptor *conn*)
+
+      (set! time-after (car (get-time-of-day)))
+      (let ((secs (- (timeval-seconds time-after) (timeval-seconds time-before)))
+            (micros (- (timeval-microseconds time-after)
+                       (timeval-microseconds time-before))))
+        (if *alog* (*alog* 'info status " " input " ("
+                           (truncate (+ (* secs 1000) (/ micros 1000)))
+                           "ms)")))
+
       (mainloop))))
 
