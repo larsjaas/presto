@@ -1,7 +1,8 @@
 # Introduction
 
-presto is basically a very basic, ad-hoc, web server implemented using
-chibi-scheme.  Maybe one day it will be something more.
+presto is basically a very basic, ad-hoc, extendable, web and rest-server
+implemented in chibi-scheme.  Maybe one day it will grow up to be something
+more.
 
 # Dependencies:
 
@@ -26,13 +27,13 @@ the full test set and see the output in the browser.
 # Projects
 
 The development of this project is at the moment driven by the development
-of https://github.com/RosenborgSupporterSoftware/storkar , which is based on
-an architecture I am familiar with from work projects, but with presto as the
-back-end.
+of https://github.com/RosenborgSupporterSoftware/storkar, which is based on
+a front-end architecture style I am familiar with from work projects, but
+here with presto as the scheme-based, written-from-scratch, back-end.
 
 When this front-end is operational, focus will return to this back-end to
-explore some areas of interest. The plan is to make request handling threaded,
-and then actor-based (like akka actors). I also want to support keep-alive
-connections, as well as websockets. With more robustness and a more serious
-approach to standards compliance, this could end up being a very scalable
-and usable, fun little project.
+explore some areas of interest. The plan is to make the request handling
+workflow actor-based (like akka actors) in some way or other. I also want to
+support keep-alive connections, as well as websockets. With more robustness
+and a more serious approach to standards compliance, this could end up being
+a very scalable and usable, fun little project.
