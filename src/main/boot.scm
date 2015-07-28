@@ -30,8 +30,7 @@
                   (iter (cdr args))))))))
 
 (define (responder-task)
-  (presto-httpd (conf-get *config* 'htdocs-root)
-                (conf-get *config* 'http-port)))
+  (presto-httpd (conf-get *config* 'http-port)))
 
 (define responder (make-thread responder-task))
 

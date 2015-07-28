@@ -43,17 +43,18 @@
 
 (define *handler-cache* '())
 
-(define (update-handler-cache file mtime env)
-  (set! *handler-cache* (update-alist *handler-cache* file (list mtime env))))
+(define (update-handler-cache file mtime env mutex)
+  (set! *handler-cache* (update-alist *handler-cache* file (list mtime env mutex))))
 
 
 (define (load-handler file)
   (let ((mtime (file-modification-time file))
         (env (load-file file))
-        (name (basename file)))
+        (name (basename file))
+        (mutex (make-mutex)))
     (*elog* 'info "loading handler '" name "'.")
     (if (eval '(initialize) env) ; delay initialization to get orderly logging?
-        (update-handler-cache file mtime env)
+        (update-handler-cache file mtime env mutex)
         (*elog* 'warning "handler '" name "' failed to initialize. skipped."))))
 
 (define (load-handlers)
@@ -75,10 +76,14 @@
             (let* ((handler (car handlers))
                    (file (list-ref handler 0))
                    (mtime (list-ref handler 1))
-                   (env (list-ref handler 2)))
+                   (env (list-ref handler 2))
+                   (mutex (list-ref handler 3)))
+              (mutex-lock! mutex)
               (cond ((eval `(is-handler? ,request) env)
+                      (mutex-unlock! mutex)
                       file)
                     (else
+                      (mutex-unlock! mutex)
                       (iter (cdr handlers)))))))))
 
 (define (eval-handler file request)
@@ -89,22 +94,36 @@
           (else
             (let ((file (list-ref handler 0))
                   (mtime (list-ref handler 1))
-                  (env (list-ref handler 2)))
-              (eval `(get-html ,request) env))))))
+                  (env (list-ref handler 2))
+                  (mutex (list-ref handler 3)))
+              (mutex-lock! mutex)
+              (let ((result (eval `(get-html ,request) env)))
+                (mutex-unlock! mutex)
+                result))))))
 
 (define (error-response-headers status)
   `(("Date" . ,(http/1.1-date-format (current-seconds)))
-    ("Content-Type" . "text/html")))
+    ("Content-Type" . ("text/html" "charset=utf-8"))))
 
-(define (http-server port headers basedir)
+(define (http-server port headers)
   (define *sock* (make-listener-socket (get-address-info "0.0.0.0" port)))
   (set-socket-option! *sock* level/socket socket-opt/reuseaddr 1)
   (load-handlers)
-  (let mainloop ()
-    (let* ((*addr* (make-sockaddr))
-           (*conn* (accept *sock* *addr* 32))
-           (in (open-input-file-descriptor *conn*))
-           (out (open-output-file-descriptor *conn*)))
+  (let ((threaded? (conf-get (get-config) 'http-threads)))
+    (let mainloop ()
+      (cond (threaded?
+              (let ((conn (accept *sock* (make-sockaddr) 64)))
+                (let ((thread (make-thread
+                                (lambda () (handle-connection conn headers)))))
+                  (thread-start! thread))))
+            (else
+              (let ((conn (accept *sock* (make-sockaddr) 64)))
+                (handle-connection conn headers))))
+      (mainloop))))
+
+(define (handle-connection conn headers)
+  (let ((in (open-input-file-descriptor conn))
+        (out (open-output-file-descriptor conn)))
       (define input (read-line in))
       (define body #f)
       (define status 200)
@@ -123,83 +142,82 @@
           (begin
             (close-input-port in)
             (close-output-port out)
-            (*alog* 'debug "closing invalid request connection.")
-            (mainloop)))
+            (close-file-descriptor conn)
+            (*alog* 'debug "closing invalid request connection."))
+          (let* ((requestline (string-split input))
+                 (method (car requestline))
+                 (path (url-decode (car (cdr requestline))))
+                 (proto (car (cdr (cdr requestline))))
+                 (args (url-arguments path)))
 
-      (let* ((requestline (string-split input))
-             (method (car requestline))
-             (path (url-decode (car (cdr requestline))))
-             (proto (car (cdr (cdr requestline))))
-             (args (url-arguments path))
-             (components '()))
+            (cond ((equal? proto "HTTP/1.1")
+                    (set! request-headers (http/1.1-read-headers in))
+                    (if (assoc 'host request-headers)
+                        (let ((host (cdr (assoc 'host request-headers))))
+                          ;(set! host (car (string-split host #\:)))
+                          (set! response-headers (cons (cons "Host" host) response-headers))))))
 
-        (cond ((equal? proto "HTTP/1.1")
-                (set! request-headers (http/1.1-read-headers in))
-                (if (assoc 'host request-headers)
-                    (let ((host (cdr (assoc 'host request-headers))))
-                      (set! host (car (string-split host #\:)))
-                      (set! response-headers (cons (cons "Host" host) response-headers))))))
+            (let ((contlen (assoc 'content-length request-headers)))
+              (cond ((and contlen (< 0 (string->number (cdr contlen))))
+                      (set! request-body
+                        (let ((bytes (string->number (cdr contlen))))
+                          (utf8->string (read-bytevector bytes in))))
+                      )))
 
-        (let ((contlen (assoc 'content-length request-headers)))
-          (cond ((and contlen (< 0 (string->number (cdr contlen))))
-                  (set! request-body
-                    (let ((bytes (string->number (cdr contlen))))
-                      (utf8->string (read-bytevector bytes in))))
-                  )))
+            (set! request (make-request method path proto request-headers))
+            (if request-body
+                (request 'set-body! request-body))
+            (rewrite-path request)
 
-        (close-input-port in) ; FIXME: implement keep-alive
-        (set! request (make-request method path proto request-headers))
-        (if request-body
-            (request 'set-body! request-body))
-        (rewrite-path request)
-        (set! components (path-split (request 'get-path)))
+            (set! handler (find-handler request))
 
-        (set! handler (find-handler request))
+            (cond (handler
+                    (let ((response (eval-handler handler request)))
+                      (set! status (list-ref response 0))
+                      (set! response-headers (append (list-ref response 1)
+                                                     response-headers))
+                      (set! body (list-ref response 2))))
 
-        (cond (handler
-                (let ((response (eval-handler handler request)))
-                  (set! status (list-ref response 0))
-                  (set! response-headers (append (list-ref response 1)
-                                                 response-headers))
-                  (set! body (list-ref response 2))))
+                  ((and (equal? "GET" method)
+                        (file-exists? (path-join (request 'get-basedir) (request 'get-path)))
+                        (file-regular? (path-join (request 'get-basedir) (request 'get-path))))
 
-              ((and (equal? "GET" method)
-                    (file-exists? (path-join (request 'get-basedir) (request 'get-path)))
-                    (file-regular? (path-join (request 'get-basedir) (request 'get-path)))
-                (let ((fileinfo (file-read (path-join (request 'get-basedir) (request 'get-path)))))
-                  (set! body (cdr fileinfo))
-                  (if (not (eq? '() (car fileinfo)))
-                      (set! response-headers (append response-headers (car fileinfo)))))))
+                    (let ((fileinfo (file-read (path-join (request 'get-basedir) (request 'get-path)))))
+                      (set! body (cdr fileinfo))
+                      (if (not (eq? '() (car fileinfo)))
+                          (set! response-headers (append response-headers (car fileinfo))))))
 
-              (else
-                (set! status 404)
-                (set! status-ok #f)
-                (if *elog* (*elog* 'error status " " input))
-                #f)))
+                  (else
+                    (set! status 404)
+                    (set! status-ok #f)
+                    (if *elog* (*elog* 'error status " " input))
+                    #f))
 
-      (cond ((not status-ok)
-             (set! body (html-error-page status))
-             (set! response-headers (append response-headers (error-response-headers status)))))
+            (cond ((not status-ok)
+                   (set! body (html-error-page status))
+                   (set! response-headers (append response-headers (error-response-headers status)))))
 
-      (if body
-          (set! response-headers (append response-headers
-                                        `(("Accept-Ranges" . "none")
-                                          ("Content-Length" . ,(bytevector-length body))))))
-      (set! time-between (car (get-time-of-day)))
+            (if body
+                (set! response-headers (append response-headers
+                                              `(("Accept-Ranges" . "none")
+                                                ("Content-Length" . ,(bytevector-length body))))))
+            (set! time-between (car (get-time-of-day)))
 
-      (show out (http/1.1-status-line status) #\return #\newline)
-      (apply show out (format-headers response-headers))
-      (write-bytevector body out) ; maybe dump with-input-from-file instead
-      (close-output-port out)
-      (close-file-descriptor *conn*)
+            (show out (http/1.1-status-line status) #\return #\newline)
+            (apply show out (format-headers response-headers))
+            (write-bytevector body out) ; maybe dump with-input-from-file instead
+            (flush-output-port out)
+            (set! time-after (car (get-time-of-day)))
 
-      (set! time-after (car (get-time-of-day)))
-      (let ((secs (- (timeval-seconds time-after) (timeval-seconds time-before)))
-            (micros (- (timeval-microseconds time-after)
-                       (timeval-microseconds time-before))))
-        (if *alog* (*alog* 'info status " " input " ("
-                           (truncate (+ (* secs 1000) (/ micros 1000)))
-                           "ms)")))
+            (close-input-port in) ; FIXME: implement keep-alive
+            (close-output-port out)
+            (close-file-descriptor conn)
 
-      (mainloop))))
+            (let ((secs (- (timeval-seconds time-after) (timeval-seconds time-before)))
+                  (micros (- (timeval-microseconds time-after)
+                             (timeval-microseconds time-before))))
+              (if *alog* (*alog* 'info status " " input " ("
+                                 (truncate (+ (* secs 1000) (/ micros 1000)))
+                                 "ms)")))))))
+
 

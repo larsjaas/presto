@@ -11,6 +11,7 @@
           (chibi string)
           (chibi filesystem)
           (chibi log)
+          (srfi 18)
           (presto alist)
           (presto config)
           (presto eval)
