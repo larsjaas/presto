@@ -1,5 +1,6 @@
 (define-library (presto logging)
   (import (chibi)
+          (srfi 18)
           (srfi 33)
           (chibi filesystem)
           (chibi show)
