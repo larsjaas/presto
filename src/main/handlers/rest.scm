@@ -51,7 +51,7 @@
   (set! *elog* (get-error-log-logger))
   (json-initialize)
   (let pathiter ((pathlist (conf-get (get-config) 'resthandler-path)))
-    (cond ((not (null? pathlist))
+    (cond ((and pathlist (not (null? pathlist)))
             (let fileiter ((files (directory-files (car pathlist))))
               (cond ((not (null? files))
                       (let ((p (path-join (car pathlist) (car files))))
