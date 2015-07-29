@@ -1,6 +1,5 @@
 (define-library (presto uuid)
-  (import (scheme small)
-          (scheme char)
+  (import (scheme char)
           (chibi process)
           (chibi string))
   (export gen-uuid)

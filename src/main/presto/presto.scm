@@ -8,7 +8,7 @@
 
 (define (presto-httpd port)
   (let ((headers
-          (list (cons "Server" (show #f "presto/" (get-presto-version-string)))
+          (list (cons "Server" (string-append "presto/" (get-presto-version-string)))
                 (cons "Connection" "keep-alive"))))
     (http-server port headers)))
 

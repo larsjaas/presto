@@ -4,7 +4,7 @@
           (srfi 33)
           (chibi filesystem)
           (chibi show)
-          (chibi time)
+          (except (chibi time) time->seconds seconds->time)
           (presto time))
   (export make-logger
           get-access-log-logger

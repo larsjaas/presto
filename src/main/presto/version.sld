@@ -1,4 +1,4 @@
 (define-library (presto version)
-  (import (scheme base))
+  (import (chibi))
   (export presto-version)
   (include "version.scm"))

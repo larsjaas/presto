@@ -1,7 +1,7 @@
 (define-library (presto json)
-  (import (scheme small)
+  (import (chibi string)
+          (scheme base)
           (scheme char)
-          (chibi string)
           (presto alist)
           (presto logging))
   (export alist? repeat-count json-initialize sexp->json json->sexp
