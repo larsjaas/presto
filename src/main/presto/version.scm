@@ -1,4 +1,4 @@
-(define *version* '(0 3 0))
+(define *version* '(0 3 1))
 
 (define (presto-version)
   *version*)
