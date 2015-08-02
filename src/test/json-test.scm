@@ -54,6 +54,12 @@
 (test '(("var" . 5)) (json->sexp "{\"var\":5}"))
 (test '(("var" . 5)("val" . "hei")) (json->sexp "{\"var\":5, \"val\":\"hei\"}"))
 (test '(("var" . (1 2 3))) (json->sexp "{\"var\": [1,2, 3\n]}"))
+(test '(("uuid" . "1ac6ca96-b545-4e0a-9620-1ac75eaa6cef")
+        ("fullname" . "Jakob Storevik")
+        ("aliases" "Jakob" "Storevik" "JS")
+        ("active" . #f)
+        ("links"))
+      (json->sexp "{\"uuid\":\"1ac6ca96-b545-4e0a-9620-1ac75eaa6cef\",\"fullname\":\"Jakob Storevik\",\"aliases\":[\"Jakob\",\"Storevik\",\"JS\"],\"active\":false,\"links\":[]}"))
 
 
 (define (main args)
